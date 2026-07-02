@@ -1,0 +1,67 @@
+import { tincAPI } from '../api'
+
+// تبدیل ArrayBuffer به base64 (برای پاس دادن zip به electron)
+function arrayBufferToBase64(buffer) {
+    let binary = ''
+    const bytes = new Uint8Array(buffer)
+    const chunk = 0x8000
+    for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk))
+    }
+    return btoa(binary)
+}
+
+/**
+ * شبکه L2 لابی رو بالا میاره:
+ * 1. به mesh لابی join (با NetBird IP)
+ * 2. config zip بگیر
+ * 3. tinc up
+ * onProgress(step, msg) برای نمایش پیشرفت
+ */
+export async function bringUpMesh(lobbyId, underlayIp, onProgress = () => {}) {
+    // ۰. مطمئن شو node ثبت شده (idempotent — اگه باشه همون رو برمی‌گردونه)
+    onProgress('register', 'آماده‌سازی هویت شبکه...')
+    try {
+        await tincAPI.register()
+    } catch (e) {
+        // اگه از قبل ثبت شده باشه ممکنه خطا نده، ادامه بده
+    }
+
+    // ۱. join mesh
+    onProgress('join', 'ثبت در شبکه بازی...')
+    const joinRes = await tincAPI.joinLobby(lobbyId, underlayIp)
+    const version = joinRes.data?.version ?? 0
+    const tincIp  = joinRes.data?.tincIp ?? null
+
+    // ۲. config zip
+    onProgress('config', 'دریافت پیکربندی شبکه...')
+    const res = await tincAPI.getConfig(lobbyId)
+    const zipB64 = arrayBufferToBase64(res.data)
+
+    // ۳. tinc up (نصب config + start سرویس)
+    onProgress('start', 'برقراری اتصال شبکه...')
+    const result = await window.electron.tinc.applyConfig(zipB64)
+    if (!result.success) throw new Error(result.error || 'خطا در راه‌اندازی شبکه')
+
+    onProgress('done', 'شبکه آماده است')
+    return { version, tincIp }
+}
+
+/**
+ * config جدید بگیر و «زنده» اعمال کن (وقتی کسی join/leave کرد) — بدون restart و
+ * بدون قطع تونل. فقط فایل‌های host به‌روز می‌شن تا peer جدید بدون قطعِ اتصال‌های
+ * موجود وارد مش بشه. تونل تا استارت بازیِ بعدی یا خروج از لابی فعال می‌مونه.
+ */
+export async function refreshMesh(lobbyId) {
+    const res = await tincAPI.getConfig(lobbyId)
+    const zipB64 = arrayBufferToBase64(res.data)
+    await window.electron.tinc.updateConfig(zipB64)
+}
+
+/**
+ * شبکه رو پایین بیار (خروج از لابی)
+ */
+export async function tearDownMesh(lobbyId) {
+    try { await tincAPI.leaveLobby(lobbyId) } catch {}
+    try { await window.electron.tinc.stop() } catch {}
+}

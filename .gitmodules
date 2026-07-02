@@ -1,0 +1,3 @@
+[submodule "GameOverlay/third_party/ingame_overlay"]
+	path = GameOverlay/third_party/ingame_overlay
+	url = https://github.com/Nemirtingas/ingame_overlay

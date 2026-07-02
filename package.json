@@ -1,0 +1,92 @@
+{
+  "name": "targame-app",
+  "version": "1.0.71",
+  "description": "TarGame - Online Gaming Platform",
+  "author": "Tar Team",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build:win": "vite build --outDir build/web && electron-builder --win",
+    "build:dir": "vite build --outDir build/web && electron-builder --win --dir",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^8.0.0",
+    "adm-zip": "^0.5.10",
+    "axios": "^1.6.0",
+    "electron-updater": "^6.8.9",
+    "livekit-client": "^2.19.1",
+    "lucide-react": "^1.17.0",
+    "obs-websocket-js": "^5.0.8",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0",
+    "zustand": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.0",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.9.0",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
+    "vite": "^5.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.targame.app",
+    "productName": "TarGame",
+    "directories": {
+      "buildResources": "assets",
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon-256.png",
+      "requestedExecutionLevel": "requireAdministrator",
+      "signingHashAlgorithms": [],
+      "sign": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "TarGame",
+      "installerIcon": "assets/icon-256.ico",
+      "uninstallerIcon": "assets/icon-256.ico",
+      "installerHeader": "assets/icon-256.ico"
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "s3.blockbone.ir/targame/"
+    },
+    "files": [
+      "build/web/**/*",
+      "electron/**/*",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor/",
+        "to": "vendor/",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
+  }
+}
