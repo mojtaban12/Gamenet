@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Check, Copy, Eye, EyeOff, Lock, Swords, X } from 'lucide-react'
 import { netbirdAPI } from '../api'
 import { useLobbyStore } from '../store/lobbyStore'
@@ -10,6 +11,7 @@ import NetworkGateBanner from '../components/NetworkGateBanner'
 import Icon from '../components/ui/Icon'
 
 export default function LobbyListPage() {
+    const { t } = useTranslation()
     const navigate                    = useNavigate()
     const [groups, setGroups]         = useState([])
     const [loadingGroups, setLoading] = useState(false)
@@ -31,7 +33,7 @@ export default function LobbyListPage() {
             setGroups(Array.isArray(res.data) ? res.data : [])
         } catch (e) {
             setGroups([])
-            setError(e.response?.data?.message || 'خطا در بارگذاری لابی‌ها')
+            setError(e.response?.data?.message || t('lobbyList.loadError'))
         } finally { setLoading(false) }
     }
 
@@ -42,7 +44,7 @@ export default function LobbyListPage() {
             await netbirdAPI.joinGroup(groupId, password)
             navigate(`/lobby/${groupId}`)
         } catch (e) {
-            const msg = e.response?.data?.message || 'خطا در پیوستن'
+            const msg = e.response?.data?.message || t('lobbyList.joinError')
             setError(msg)
             setJoiningId(null)
         }
@@ -71,7 +73,7 @@ export default function LobbyListPage() {
                 setPendingJoin(group)
                 setJoiningId(null)
             } else {
-                setError(e.response?.data?.message || 'خطا در پیوستن')
+                setError(e.response?.data?.message || t('lobbyList.joinError'))
                 setJoiningId(null)
             }
         }
@@ -90,20 +92,20 @@ export default function LobbyListPage() {
                 </div>
                 <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-og flex-shrink-0">
                     <div>
-                        <p className="og-label text-og-muted">شبکه بازی</p>
-                        <h2 className="og-title text-xl text-og-accent">لابی‌های فعال</h2>
+                        <p className="og-label text-og-muted">{t('lobbyList.headerLabel')}</p>
+                        <h2 className="og-title text-xl text-og-accent">{t('lobbyList.headerTitle')}</h2>
                     </div>
                     <div className="flex items-center gap-2">
                         <button type="button" onClick={fetchGroups} className="og-btn-ghost px-3 text-xs">
-                            بروزرسانی
+                            {t('lobbyList.refresh')}
                         </button>
                         <button
                             type="button"
                             onClick={() => setShowCreate(true)}
                             disabled={!networkReady}
-                            title={!networkReady ? 'در حال اتصال به شبکه...' : ''}
+                            title={!networkReady ? t('lobbyList.connectingToNetwork') : ''}
                             className="og-btn-primary text-xs disabled:opacity-40 disabled:cursor-not-allowed">
-                            + ساخت لابی
+                            {t('lobbyList.createLobby')}
                         </button>
                     </div>
                 </header>
@@ -130,13 +132,13 @@ export default function LobbyListPage() {
                         {loadingGroups ? (
                             <div className="flex items-center justify-center gap-2 py-16 text-og-muted text-sm">
                                 <span className="w-5 h-5 border-2 border-og-primary/30 border-t-og-primary rounded-full animate-spin" />
-                                در حال بارگذاری...
+                                {t('common.loading')}
                             </div>
                         ) : filtered.length === 0 ? (
                             <div className="flex flex-col items-center justify-center gap-3 py-16 text-og-muted">
                                 <Icon icon={Swords} size="lg" className="opacity-25" />
                                 <p className="text-sm">
-                                    {search ? 'لابی‌ای با این مشخصات پیدا نشد' : 'هیچ لابی‌ای وجود ندارد'}
+                                    {search ? t('lobbyList.noResults') : t('lobbyList.noLobbies')}
                                 </p>
                             </div>
                         ) : (
@@ -180,6 +182,7 @@ export default function LobbyListPage() {
 }
 
 function SearchBar({ value, onChange, onJoinById, joining, currentLobbyId, networkReady }) {
+    const { t } = useTranslation()
     const [mode, setMode] = useState('search')
     const [idInput, setIdInput] = useState('')
     const isCurrentLobby = currentLobbyId && idInput.trim() === currentLobbyId
@@ -187,7 +190,7 @@ function SearchBar({ value, onChange, onJoinById, joining, currentLobbyId, netwo
     return (
         <div>
             <div className="flex gap-1 p-1 rounded-lg bg-og-tab w-fit mb-3">
-                {[['search', 'جستجو'], ['id', 'جوین با ID']].map(([key, label]) => (
+                {[['search', t('lobbyList.searchTab')], ['id', t('lobbyList.joinByIdTab')]].map(([key, label]) => (
                     <button
                         key={key}
                         type="button"
@@ -203,7 +206,7 @@ function SearchBar({ value, onChange, onJoinById, joining, currentLobbyId, netwo
             {mode === 'search' ? (
                 <input
                     className="og-input w-full max-w-xl"
-                    placeholder="جستجو در لابی‌ها..."
+                    placeholder={t('lobbyList.searchPlaceholder')}
                     value={value}
                     onChange={e => onChange(e.target.value)}
                 />
@@ -211,7 +214,7 @@ function SearchBar({ value, onChange, onJoinById, joining, currentLobbyId, netwo
                 <div className="flex gap-2 max-w-xl">
                     <input
                         className="og-input flex-1 font-mono text-sm"
-                        placeholder="Lobby ID را وارد کنید..."
+                        placeholder={t('lobbyList.idPlaceholder')}
                         value={idInput}
                         onChange={e => setIdInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && onJoinById(idInput)}
@@ -221,7 +224,7 @@ function SearchBar({ value, onChange, onJoinById, joining, currentLobbyId, netwo
                         onClick={() => onJoinById(idInput)}
                         disabled={!idInput.trim() || joining || isCurrentLobby || !networkReady}
                         className="og-btn-primary px-4 py-2.5 text-xs shrink-0 disabled:opacity-50">
-                        {joining ? '...' : isCurrentLobby ? 'در لابی' : !networkReady ? 'در حال اتصال...' : 'پیوستن'}
+                        {joining ? '...' : isCurrentLobby ? t('lobbyList.inLobby') : !networkReady ? t('common.connecting') : t('common.join')}
                     </button>
                 </div>
             )}
@@ -230,6 +233,7 @@ function SearchBar({ value, onChange, onJoinById, joining, currentLobbyId, netwo
 }
 
 function GroupRow({ group, joining, isCurrentLobby, onJoin, networkReady }) {
+    const { t } = useTranslation()
     const [copied, setCopied] = useState(false)
 
     function copyId(e) {
@@ -248,14 +252,14 @@ function GroupRow({ group, joining, isCurrentLobby, onJoin, networkReady }) {
                 <div className="flex items-center gap-1.5">
                     <span className="text-og-body text-sm font-semibold truncate">{group.name}</span>
                     {group.isPrivate && (
-                        <Icon icon={Lock} size="xs" className="text-og-muted shrink-0" title="لابی خصوصی" />
+                        <Icon icon={Lock} size="xs" className="text-og-muted shrink-0" title={t('lobbyList.privateLobby')} />
                     )}
                 </div>
                 <button
                     type="button"
                     onClick={copyId}
-                    className="flex items-center gap-1.5 mt-0.5 text-right group/copy"
-                    title="کلیک برای کپی">
+                    className="flex items-center gap-1.5 mt-0.5 text-start group/copy"
+                    title={t('lobbyList.clickToCopy')}>
                     <span className="font-mono text-og-muted text-xs group-hover/copy:text-og-accent transition-colors truncate max-w-[200px]">
                         {group.id}
                     </span>
@@ -265,23 +269,23 @@ function GroupRow({ group, joining, isCurrentLobby, onJoin, networkReady }) {
                 </button>
             </div>
 
-            <div className="text-left shrink-0 px-2">
+            <div className="text-end shrink-0 px-2">
                 <div className="text-og-body text-sm font-mono font-bold">{group.peersCount}</div>
-                <div className="text-og-muted text-xs">بازیکن</div>
+                <div className="text-og-muted text-xs">{t('lobbyList.playersUnit')}</div>
             </div>
 
             <button
                 type="button"
                 onClick={onJoin}
                 disabled={joining || isCurrentLobby || !networkReady}
-                title={!networkReady ? 'در حال اتصال به شبکه...' : ''}
+                title={!networkReady ? t('lobbyList.connectingToNetwork') : ''}
                 className="og-btn-primary px-4 py-2 text-xs shrink-0 disabled:opacity-50">
                 {joining ? (
                     <span className="w-4 h-4 border-2 border-og-primary/30 border-t-og-badge rounded-full animate-spin inline-block" />
-                ) : isCurrentLobby ? 'در لابی' : !networkReady ? 'در حال اتصال...' : (
+                ) : isCurrentLobby ? t('lobbyList.inLobby') : !networkReady ? t('common.connecting') : (
                     <span className="flex items-center gap-1">
                         {group.isPrivate && <Icon icon={Lock} size="xs" />}
-                        پیوستن
+                        {t('common.join')}
                     </span>
                 )}
             </button>
@@ -290,6 +294,7 @@ function GroupRow({ group, joining, isCurrentLobby, onJoin, networkReady }) {
 }
 
 function PasswordPromptModal({ group, joining, onClose, onJoin }) {
+    const { t } = useTranslation()
     const [password, setPassword] = useState('')
     const [showPw, setShowPw]     = useState(false)
     const [error, setError]       = useState('')
@@ -298,7 +303,7 @@ function PasswordPromptModal({ group, joining, onClose, onJoin }) {
     useEffect(() => { inputRef.current?.focus() }, [])
 
     function handleJoin() {
-        if (!password.trim()) { setError('رمز عبور را وارد کنید'); return }
+        if (!password.trim()) { setError(t('lobbyList.passwordRequired')); return }
         setError('')
         onJoin(password)
     }
@@ -317,7 +322,7 @@ function PasswordPromptModal({ group, joining, onClose, onJoin }) {
                     <div>
                         <div className="flex items-center gap-2">
                             <Icon icon={Lock} size="sm" className="text-og-accent" />
-                            <h3 className="og-title text-lg text-og-accent">لابی خصوصی</h3>
+                            <h3 className="og-title text-lg text-og-accent">{t('lobbyList.passwordPromptTitle')}</h3>
                         </div>
                         <p className="text-og-muted text-xs mt-0.5 truncate max-w-[220px]">{group.name}</p>
                     </div>
@@ -330,13 +335,13 @@ function PasswordPromptModal({ group, joining, onClose, onJoin }) {
                 </div>
 
                 <div className="mb-4">
-                    <label className="og-label text-og-muted block mb-2">رمز عبور لابی</label>
+                    <label className="og-label text-og-muted block mb-2">{t('lobbyList.passwordLabel')}</label>
                     <div className="relative">
                         <input
                             ref={inputRef}
                             type={showPw ? 'text' : 'password'}
-                            className="og-input no-drag w-full pl-10"
-                            placeholder="رمز عبور را وارد کنید..."
+                            className="og-input no-drag w-full pe-10"
+                            placeholder={t('lobbyList.passwordPlaceholder')}
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleJoin()}
@@ -345,7 +350,7 @@ function PasswordPromptModal({ group, joining, onClose, onJoin }) {
                         <button
                             type="button"
                             onClick={() => setShowPw(v => !v)}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-og-muted hover:text-og-body transition-colors">
+                            className="absolute end-3 top-1/2 -translate-y-1/2 text-og-muted hover:text-og-body transition-colors">
                             <Icon icon={showPw ? EyeOff : Eye} size="xs" />
                         </button>
                     </div>
@@ -354,7 +359,7 @@ function PasswordPromptModal({ group, joining, onClose, onJoin }) {
 
                 <div className="flex gap-3">
                     <button type="button" onClick={onClose} className="og-btn-ghost flex-1">
-                        انصراف
+                        {t('common.cancel')}
                     </button>
                     <button
                         type="button"
@@ -364,9 +369,9 @@ function PasswordPromptModal({ group, joining, onClose, onJoin }) {
                         {joining ? (
                             <span className="flex items-center justify-center gap-2">
                                 <span className="w-3 h-3 border border-og-primary border-t-og-badge rounded-full animate-spin" />
-                                در حال ورود...
+                                {t('lobbyList.enteringLobby')}
                             </span>
-                        ) : 'ورود'}
+                        ) : t('lobbyList.enter')}
                     </button>
                 </div>
             </div>
@@ -376,6 +381,7 @@ function PasswordPromptModal({ group, joining, onClose, onJoin }) {
 }
 
 function CreateLobbyModal({ onClose, onCreate }) {
+    const { t } = useTranslation()
     const [name, setName]           = useState('')
     const [isPrivate, setIsPrivate] = useState(false)
     const [password, setPassword]   = useState('')
@@ -388,14 +394,14 @@ function CreateLobbyModal({ onClose, onCreate }) {
 
     async function handleCreate() {
         if (!name.trim()) return
-        if (isPrivate && !password.trim()) { setError('رمز عبور لابی خصوصی را وارد کنید'); return }
+        if (isPrivate && !password.trim()) { setError(t('lobbyList.createPasswordRequired')); return }
         setCreating(true)
         setError('')
         try {
             const res = await netbirdAPI.createGroup(name.trim(), isPrivate, password)
             onCreate(res.data.id)
         } catch (e) {
-            setError(e.response?.data?.message || 'خطا در ساخت لابی')
+            setError(e.response?.data?.message || t('lobbyList.createError'))
             setCreating(false)
         }
     }
@@ -418,9 +424,9 @@ function CreateLobbyModal({ onClose, onCreate }) {
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <h3 id="create-lobby-title" className="og-title text-lg text-og-accent">
-                            ساخت لابی
+                            {t('lobbyList.createModalTitle')}
                         </h3>
-                        <p className="text-og-muted text-xs mt-0.5">یک لابی بازی جدید بساز</p>
+                        <p className="text-og-muted text-xs mt-0.5">{t('lobbyList.createModalSubtitle')}</p>
                     </div>
                     <button
                         type="button"
@@ -432,21 +438,21 @@ function CreateLobbyModal({ onClose, onCreate }) {
 
                 <div className="mb-4">
                     <label htmlFor="lobby-name" className="og-label text-og-muted block mb-2">
-                        نام لابی
+                        {t('lobbyList.nameLabel')}
                     </label>
                     <input
                         id="lobby-name"
                         ref={nameRef}
                         type="text"
                         className="og-input no-drag w-full"
-                        placeholder="example : Game Center"
+                        placeholder={t('lobbyList.namePlaceholder')}
                         value={name}
                         onChange={e => setName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && !isPrivate && handleCreate()}
                         maxLength={32}
                         autoComplete="off"
                     />
-                    <div className="text-right text-og-muted text-xs mt-1">{name.length}/32</div>
+                    <div className="text-end text-og-muted text-xs mt-1">{name.length}/32</div>
                 </div>
 
                 {/* Private lobby toggle */}
@@ -465,18 +471,18 @@ function CreateLobbyModal({ onClose, onCreate }) {
                             {isPrivate && <Check size={10} strokeWidth={3} className="text-white" />}
                         </div>
                         <Icon icon={Lock} size="xs" className="shrink-0" />
-                        <span className="text-xs font-medium">لابی خصوصی (رمزدار)</span>
+                        <span className="text-xs font-medium">{t('lobbyList.privateToggle')}</span>
                     </button>
                 </div>
 
                 {isPrivate && (
                     <div className="mb-4">
-                        <label className="og-label text-og-muted block mb-2">رمز عبور</label>
+                        <label className="og-label text-og-muted block mb-2">{t('lobbyList.createPasswordLabel')}</label>
                         <div className="relative">
                             <input
                                 type={showPw ? 'text' : 'password'}
-                                className="og-input no-drag w-full pl-10"
-                                placeholder="رمز لابی را وارد کنید..."
+                                className="og-input no-drag w-full pe-10"
+                                placeholder={t('lobbyList.createPasswordPlaceholder')}
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleCreate()}
@@ -485,7 +491,7 @@ function CreateLobbyModal({ onClose, onCreate }) {
                             <button
                                 type="button"
                                 onClick={() => setShowPw(v => !v)}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-og-muted hover:text-og-body transition-colors">
+                                className="absolute end-3 top-1/2 -translate-y-1/2 text-og-muted hover:text-og-body transition-colors">
                                 <Icon icon={showPw ? EyeOff : Eye} size="xs" />
                             </button>
                         </div>
@@ -500,7 +506,7 @@ function CreateLobbyModal({ onClose, onCreate }) {
 
                 <div className="flex gap-3">
                     <button type="button" onClick={onClose} className="og-btn-ghost flex-1">
-                        انصراف
+                        {t('common.cancel')}
                     </button>
                     <button
                         type="button"
@@ -510,9 +516,9 @@ function CreateLobbyModal({ onClose, onCreate }) {
                         {creating ? (
                             <span className="flex items-center justify-center gap-2">
                                 <span className="w-3 h-3 border border-og-primary border-t-og-badge rounded-full animate-spin" />
-                                در حال ساخت...
+                                {t('lobbyList.creating')}
                             </span>
-                        ) : 'ساخت و ورود'}
+                        ) : t('lobbyList.createSubmit')}
                     </button>
                 </div>
             </div>

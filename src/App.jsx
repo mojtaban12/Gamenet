@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from './store/authStore'
 import { useThemeStore } from './store/themeStore'
+import { useLocaleStore } from './store/localeStore'
 import { useUiStore } from './store/uiStore'
 import { useSettingStore } from './store/settingStore'
 import { initAudio } from './utils/sound'
@@ -29,14 +31,15 @@ const APP_VERSION = window.electron?.appVersion || (typeof __APP_VERSION__ !== '
 
 
 function MaintenanceScreen() {
+    const { t } = useTranslation()
     return (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
             <div className="w-16 h-16 rounded-2xl bg-og-subtle flex items-center justify-center mb-2 text-4xl">
                 🛠
             </div>
-            <h2 className="og-title text-xl text-og-body">در حال بروزرسانی</h2>
+            <h2 className="og-title text-xl text-og-body">{t('app.maintenanceTitle')}</h2>
             <p className="text-og-muted text-sm max-w-xs leading-relaxed">
-                سرویس موقتاً در دسترس نیست. لطفاً چند دقیقه دیگر امتحان کنید.
+                {t('app.maintenanceBody')}
             </p>
         </div>
     )
@@ -67,11 +70,12 @@ function RootRedirect() {
 }
 
 function LoadingScreen() {
+    const { t } = useTranslation()
     return (
         <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
                 <div className="w-8 h-8 border-2 border-gn-accent/30 border-t-gn-accent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-gn-muted text-xs">در حال بارگذاری...</p>
+                <p className="text-gn-muted text-xs">{t('common.loading')}</p>
             </div>
         </div>
     )
@@ -85,14 +89,18 @@ export default function App() {
     const [updateInfo, setUpdateInfo]     = useState({ latestVersion: '', downloadUrl: '' })
     const hydrate = useAuthStore(s => s.hydrate)
     const hydrateTheme = useThemeStore(s => s.hydrate)
+    const hydrateLocale = useLocaleStore(s => s.hydrate)
     const exitModalOpen = useUiStore(s => s.exitModalOpen)
+    const exitModalSource = useUiStore(s => s.exitModalSource)
     const logoutModalOpen = useUiStore(s => s.logoutModalOpen)
     const openExitModal = useUiStore(s => s.openExitModal)
+    const openLogoutModal = useUiStore(s => s.openLogoutModal)
     const closeExitModal = useUiStore(s => s.closeExitModal)
     const closeLogoutModal = useUiStore(s => s.closeLogoutModal)
     const logout = useAuthStore(s => s.logout)
     useEffect(() => {
         hydrateTheme()
+        hydrateLocale()
         hydrate()
         initAudio()
 
@@ -145,6 +153,11 @@ export default function App() {
         closeExitModal()
     }
 
+    function handleExitToLogout() {
+        closeExitModal()
+        openLogoutModal()
+    }
+
     async function handleLogoutConfirm() {
         setLoggingOut(true)
         await logout()
@@ -191,8 +204,10 @@ export default function App() {
 
                     {exitModalOpen && (
                         <ExitModal
+                            source={exitModalSource}
                             onQuit={handleQuit}
                             onMinimize={handleMinimize}
+                            onLogout={handleExitToLogout}
                             onCancel={handleCancel}
                             quitting={quitting}
                         />

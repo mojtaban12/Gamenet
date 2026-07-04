@@ -4,6 +4,7 @@ import { netbirdAPI, teamAPI } from '../api'
 import { useAuthStore } from './authStore'
 import { useVoiceStore } from './voiceStore'
 import { refreshMesh, tearDownMesh } from '../utils/meshNetwork'
+import i18n from '../i18n'
 
 const getApiUrl = () => import.meta.env.VITE_API_URL || 'http://localhost:5224'
 
@@ -147,7 +148,7 @@ async function connectHub(groupId, token, userId) {
     })
 
     hub.on('UserJoined', (data) => {
-        addSystemMessage(`${data.username} وارد لابی شد`)
+        addSystemMessage(i18n.t('lobby.userJoined', { username: data.username }))
     })
 
     hub.on('SystemMessage', (text) => {
@@ -155,7 +156,7 @@ async function connectHub(groupId, token, userId) {
     })
 
     hub.on('UserLeft', (data) => {
-        addSystemMessage(`${data.username} از لابی خارج شد`)
+        addSystemMessage(i18n.t('lobby.userLeft', { username: data.username }))
         useLobbyStore.setState(s => ({
             typingUsers: s.typingUsers.filter(u => u.userId !== data.userId)
         }))
@@ -165,7 +166,7 @@ async function connectHub(groupId, token, userId) {
     hub.on('HostChanged', (data) => {
         const newHostId = data.newHostId?.toString()
         useLobbyStore.setState({ hostId: newHostId })
-        addSystemMessage(`${data.newHostUsername || 'کاربر جدید'} میزبان لابی شد`)
+        addSystemMessage(i18n.t('lobby.hostChanged', { username: data.newHostUsername || i18n.t('lobby.newUserFallback') }))
     })
 
     // Current user was kicked — await full cleanup before dispatching lobby:kicked.

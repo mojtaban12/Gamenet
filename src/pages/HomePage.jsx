@@ -1,33 +1,35 @@
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { AlertTriangle, MessageCircle, Mic2, Play, Swords, Users } from 'lucide-react'
 import { usePresenceStore } from '../store/presenceStore'
 import AppShell from '../components/AppShell'
 import Icon from '../components/ui/Icon'
 
-const FEATURES = [
-    { title: 'لابی', desc: 'ساخت و جوین', icon: Swords },
-    { title: 'چت', desc: 'پیام با دوستان', icon: MessageCircle },
-    { title: 'ویس', desc: 'مثل Steam', icon: Mic2 },
-]
-
-const SOCIAL_LINKS = [
-    {
-        label: 'اینستاگرام',
-        handle: '@tarcommunity',
-        href: 'https://www.instagram.com/tarcommunity/',
-        icon: InstagramIcon,
-    },
-    {
-        label: 'تلگرام',
-        handle: '@tarcommunity',
-        href: 'https://t.me/tarcommunity',
-        icon: TelegramIcon,
-    },
-]
-
 export default function HomePage() {
+    const { t } = useTranslation()
     const navigate = useNavigate()
     const { friends } = usePresenceStore()
+
+    const FEATURES = [
+        { title: t('home.featureLobbyTitle'), desc: t('home.featureLobbyDesc'), icon: Swords },
+        { title: t('home.featureChatTitle'), desc: t('home.featureChatDesc'), icon: MessageCircle },
+        { title: t('home.featureVoiceTitle'), desc: t('home.featureVoiceDesc'), icon: Mic2 },
+    ]
+
+    const SOCIAL_LINKS = [
+        {
+            label: t('home.socialInstagram'),
+            handle: '@tarcommunity',
+            href: 'https://www.instagram.com/tarcommunity/',
+            icon: InstagramIcon,
+        },
+        {
+            label: t('home.socialTelegram'),
+            handle: '@targame',
+            href: 'https://t.me/targame',
+            icon: TelegramIcon,
+        },
+    ]
 
     const onlineFriends = friends.filter(f => f.online)
     const displayFriends = onlineFriends.length > 0 ? onlineFriends.slice(0, 4) : friends.slice(0, 4)
@@ -35,12 +37,12 @@ export default function HomePage() {
     return (
         <AppShell>
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                <div className="flex-1 min-h-0 overflow-y-auto pb-8 pr-1">
+                <div className="flex-1 min-h-0 overflow-y-auto pb-8 pe-1">
                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                         <div className="xl:col-span-8 space-y-5">
-                            <AboutCard onStart={() => navigate('/rooms')} onFriends={() => navigate('/friends')} />
+                            <AboutCard FEATURES={FEATURES} onStart={() => navigate('/rooms')} onFriends={() => navigate('/friends')} />
                             <BetaNotice />
-                            <FeedbackCard />
+                            <FeedbackCard SOCIAL_LINKS={SOCIAL_LINKS} />
                         </div>
 
                         <div className="xl:col-span-4">
@@ -58,25 +60,25 @@ export default function HomePage() {
     )
 }
 
-function AboutCard({ onStart, onFriends }) {
+function AboutCard({ FEATURES, onStart, onFriends }) {
+    const { t } = useTranslation()
     return (
         <section className="og-home-about relative overflow-hidden rounded-2xl p-6 md:p-8">
             <div className="absolute inset-0 og-home-about-bg" />
             <div className="absolute inset-0 og-home-about-overlay" />
 
-            <div className="relative space-y-6 text-right">
+            <div className="relative space-y-6 text-start">
                 <div className="space-y-4">
                     <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-og-primary-dim border border-og-primary text-og-accent og-label">
                         <Icon icon={Play} size="xs" />
-                        تارگیم چیه؟
+                        {t('home.aboutBadge')}
                     </span>
                     <h1 className="og-title text-3xl md:text-4xl font-black text-og-body leading-tight tracking-tight">
-                        گیم‌نت شخصی برای{' '}
-                        <span className="text-og-accent">بازی با دوستان</span>
+                        {t('home.aboutTitleLine1')}{' '}
+                        <span className="text-og-accent">{t('home.aboutTitleHighlight')}</span>
                     </h1>
                     <p className="text-og-muted text-sm md:text-base max-w-2xl leading-relaxed">
-                        تارگیم یک کلاینت سبکه برای LAN کردن با اسکواد. لابی، چت و ویس — چیزایی که گیمرها
-                        معمولاً تو Steam می‌شناسن — اینجا یکجا جمع شدن.
+                        {t('home.aboutDescription')}
                     </p>
                 </div>
 
@@ -98,10 +100,10 @@ function AboutCard({ onStart, onFriends }) {
 
                 <div className="flex flex-wrap gap-3">
                     <button type="button" onClick={onStart} className="og-btn-primary px-8 py-3 og-neon-glow">
-                        ساخت یا جوین لابی
+                        {t('home.createOrJoin')}
                     </button>
                     <button type="button" onClick={onFriends} className="og-btn-ghost px-6 py-3">
-                        دیدن دوستان
+                        {t('home.viewFriends')}
                     </button>
                 </div>
             </div>
@@ -110,30 +112,31 @@ function AboutCard({ onStart, onFriends }) {
 }
 
 function BetaNotice() {
+    const { t } = useTranslation()
     return (
-        <section className="og-card rounded-2xl p-5 flex gap-4 text-right">
+        <section className="og-card rounded-2xl p-5 flex gap-4 text-start">
             <div className="w-11 h-11 rounded-xl bg-[#fec931]/10 border border-[#fec931]/30 flex items-center justify-center shrink-0">
                 <Icon icon={AlertTriangle} size="md" className="text-[#fec931]" />
             </div>
             <div className="space-y-1 min-w-0">
-                <p className="og-title text-base text-og-body">نسخه بتاست</p>
+                <p className="og-title text-base text-og-body">{t('home.betaTitle')}</p>
                 <p className="text-og-muted text-sm leading-relaxed">
-                    ممکنه باگ‌هایی در بخش‌های مختلف داشته باشیم، بخصوص در LAN کردن. اگر چیزی دیدید،
-                    حتماً بهمون بگید.
+                    {t('home.betaDescription')}
                 </p>
             </div>
         </section>
     )
 }
 
-function FeedbackCard() {
+function FeedbackCard({ SOCIAL_LINKS }) {
+    const { t } = useTranslation()
     return (
-        <section className="og-card rounded-2xl p-5 space-y-4 text-right">
+        <section className="og-card rounded-2xl p-5 space-y-4 text-start">
             <div>
-                <p className="og-label text-og-accent">بازخورد</p>
-                <h2 className="og-title text-lg text-og-body mt-1">نظراتتون برامون مهمه</h2>
+                <p className="og-label text-og-accent">{t('home.feedbackLabel')}</p>
+                <h2 className="og-title text-lg text-og-body mt-1">{t('home.feedbackTitle')}</h2>
                 <p className="text-og-muted text-sm mt-2 leading-relaxed">
-                    خوشحال می‌شیم بازخورد، پیشنهاد یا گزارش باگ‌تون رو تو اینستا یا تلگرام برامون بفرستید.
+                    {t('home.feedbackDescription')}
                 </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -162,7 +165,7 @@ function SocialLink({ href, label, handle, icon: SocialIcon }) {
             <span className="w-10 h-10 rounded-xl bg-og-primary-dim border border-og-primary flex items-center justify-center text-og-accent">
                 <SocialIcon />
             </span>
-            <span className="text-right">
+            <span className="text-start">
                 <span className="block og-title text-sm text-og-body">{label}</span>
                 <span className="block text-og-muted text-xs mt-0.5 ltr" dir="ltr">{handle}</span>
             </span>
@@ -171,6 +174,7 @@ function SocialLink({ href, label, handle, icon: SocialIcon }) {
 }
 
 function OnlineFriendsCard({ onlineCount, friends, onOpenFriends, onOpenChat }) {
+    const { t } = useTranslation()
     return (
         <section className="og-card rounded-2xl p-5 space-y-4 xl:sticky xl:top-0">
             <div className="flex items-center justify-between">
@@ -181,10 +185,10 @@ function OnlineFriendsCard({ onlineCount, friends, onOpenFriends, onOpenChat }) 
                         )}
                         <span className={`relative inline-flex w-2.5 h-2.5 rounded-full ${onlineCount > 0 ? 'bg-gn-green' : 'bg-gn-muted'}`} />
                     </span>
-                    <h2 className="og-title text-lg text-og-body">دوستان آنلاین</h2>
+                    <h2 className="og-title text-lg text-og-body">{t('home.onlineFriendsTitle')}</h2>
                 </div>
                 <span className="bg-og-primary-dim text-og-accent px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
-                    {onlineCount} نفر
+                    {t('home.onlineFriendsCount', { count: onlineCount })}
                 </span>
             </div>
 
@@ -192,7 +196,7 @@ function OnlineFriendsCard({ onlineCount, friends, onOpenFriends, onOpenChat }) 
                 {friends.length === 0 ? (
                     <div className="flex flex-col items-center gap-2 py-10 text-center">
                         <Icon icon={Users} size="lg" className="text-og-muted opacity-30" />
-                        <p className="text-og-muted text-sm">هنوز دوستی آنلاین نیست</p>
+                        <p className="text-og-muted text-sm">{t('home.onlineFriendsEmpty')}</p>
                     </div>
                 ) : (
                     friends.map(friend => (
@@ -200,18 +204,18 @@ function OnlineFriendsCard({ onlineCount, friends, onOpenFriends, onOpenChat }) 
                             key={friend.friendId}
                             type="button"
                             onClick={() => onOpenChat(friend.friendId)}
-                            className="w-full flex items-center justify-between p-2 rounded-xl transition-colors hover:bg-og-hover group text-right">
+                            className="w-full flex items-center justify-between p-2 rounded-xl transition-colors hover:bg-og-hover group text-start">
                             <div className="flex items-center gap-3 min-w-0">
                                 <div className="relative flex-shrink-0">
                                     <div className={`w-10 h-10 og-avatar-ring text-sm font-bold ${friend.online ? 'ring-2 ring-og-primary/30' : ''}`}>
                                         {friend.username[0].toUpperCase()}
                                     </div>
-                                    <span className={`absolute bottom-0 left-0 w-3 h-3 rounded-full border-2 border-gn-bg ${friend.online ? 'bg-gn-green' : 'bg-gn-muted'}`} />
+                                    <span className={`absolute bottom-0 start-0 w-3 h-3 rounded-full border-2 border-gn-bg ${friend.online ? 'bg-gn-green' : 'bg-gn-muted'}`} />
                                 </div>
                                 <div className="min-w-0">
                                     <p className="og-title text-sm text-og-body truncate">{friend.username}</p>
                                     <p className={`text-xs truncate ${friend.online ? 'text-og-accent' : 'text-og-muted'}`}>
-                                        {friend.online ? 'آنلاین' : 'آفلاین'}
+                                        {friend.online ? t('common.online') : t('common.offline')}
                                     </p>
                                 </div>
                             </div>
@@ -227,7 +231,7 @@ function OnlineFriendsCard({ onlineCount, friends, onOpenFriends, onOpenChat }) 
                 type="button"
                 onClick={onOpenFriends}
                 className="w-full py-2.5 bg-og-tab border border-og rounded-xl text-sm text-og-muted transition-all hover:text-og-body hover:border-og-primary">
-                مشاهده همه دوستان
+                {t('home.viewAllFriends')}
             </button>
         </section>
     )

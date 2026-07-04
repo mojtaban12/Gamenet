@@ -1,4 +1,5 @@
 import { tincAPI } from '../api'
+import i18n from '../i18n'
 
 // تبدیل ArrayBuffer به base64 (برای پاس دادن zip به electron)
 function arrayBufferToBase64(buffer) {
@@ -20,7 +21,7 @@ function arrayBufferToBase64(buffer) {
  */
 export async function bringUpMesh(lobbyId, underlayIp, onProgress = () => {}) {
     // ۰. مطمئن شو node ثبت شده (idempotent — اگه باشه همون رو برمی‌گردونه)
-    onProgress('register', 'آماده‌سازی هویت شبکه...')
+    onProgress('register', i18n.t('mesh.registering'))
     try {
         await tincAPI.register()
     } catch (e) {
@@ -28,22 +29,22 @@ export async function bringUpMesh(lobbyId, underlayIp, onProgress = () => {}) {
     }
 
     // ۱. join mesh
-    onProgress('join', 'ثبت در شبکه بازی...')
+    onProgress('join', i18n.t('mesh.joining'))
     const joinRes = await tincAPI.joinLobby(lobbyId, underlayIp)
     const version = joinRes.data?.version ?? 0
     const tincIp  = joinRes.data?.tincIp ?? null
 
     // ۲. config zip
-    onProgress('config', 'دریافت پیکربندی شبکه...')
+    onProgress('config', i18n.t('mesh.gettingConfig'))
     const res = await tincAPI.getConfig(lobbyId)
     const zipB64 = arrayBufferToBase64(res.data)
 
     // ۳. tinc up (نصب config + start سرویس)
-    onProgress('start', 'برقراری اتصال شبکه...')
+    onProgress('start', i18n.t('mesh.startingConnection'))
     const result = await window.electron.tinc.applyConfig(zipB64)
-    if (!result.success) throw new Error(result.error || 'خطا در راه‌اندازی شبکه')
+    if (!result.success) throw new Error(result.error || i18n.t('mesh.setupError'))
 
-    onProgress('done', 'شبکه آماده است')
+    onProgress('done', i18n.t('mesh.ready'))
     return { version, tincIp }
 }
 

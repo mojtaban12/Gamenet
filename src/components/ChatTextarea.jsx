@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect } from 'react'
+import { useRef, useLayoutEffect, useState } from 'react'
 
 /**
  * اینپوتِ چندخطیِ چت.
@@ -22,13 +22,20 @@ export default function ChatTextarea({
     ...rest
 }) {
     const ref = useRef(null)
+    const singleLineHeightRef = useRef(null)
+    const [scrollable, setScrollable] = useState(false)
 
-    // auto-grow: ارتفاع رو با محتوا تنظیم کن
+    // auto-grow: ارتفاع رو با محتوا تنظیم کن؛ اسکرول فقط وقتی چندخطی شد
     useLayoutEffect(() => {
         const el = ref.current
         if (!el) return
         el.style.height = 'auto'
-        el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px'
+        const sh = el.scrollHeight
+        if (!value || singleLineHeightRef.current === null) {
+            singleLineHeightRef.current = sh
+        }
+        el.style.height = Math.min(sh, maxHeight) + 'px'
+        setScrollable(sh > singleLineHeightRef.current)
     }, [value, maxHeight])
 
     function onKeyDown(e) {
@@ -60,7 +67,7 @@ export default function ChatTextarea({
             value={value}
             onChange={e => onChange(e.target.value)}
             onKeyDown={onKeyDown}
-            className={`resize-none overflow-y-auto ${className}`}
+            className={`resize-none ${scrollable ? 'overflow-y-auto' : 'overflow-hidden'} ${className}`}
             {...rest}
         />
     )

@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { RefreshCw, RotateCw, Minus, X } from 'lucide-react'
 import appIcon from '../../assets/icon-32.png'
 import { useUpdateStore } from '../store/updateStore'
+import { useLocaleStore, getDir } from '../store/localeStore'
 import Icon from './ui/Icon'
 
 export default function UpdateBlockScreen({ currentVersion, latestVersion }) {
+    const { t } = useTranslation()
+    const dir = getDir(useLocaleStore(s => s.locale))
     const { phase, progress, setDownloading, setProgress, setReady } = useUpdateStore()
     const [closing, setClosing] = useState(false)
 
@@ -40,10 +44,10 @@ export default function UpdateBlockScreen({ currentVersion, latestVersion }) {
     const pct  = Math.round(progress?.percent ?? 0)
 
     const statusText = {
-        idle:        'در حال آماده‌سازی...',
-        downloading: `در حال دانلود... ${pct}%`,
-        ready:       'در حال نصب و راه‌اندازی مجدد...',
-    }[phase] ?? 'در حال دانلود...'
+        idle:        t('updateBlock.preparing'),
+        downloading: t('updateBlock.downloading', { pct }),
+        ready:       t('updateBlock.readyInstalling'),
+    }[phase] ?? t('updateBlock.downloading', { pct })
 
     return (
         <div className="h-screen flex flex-col bg-gn-bg overflow-hidden">
@@ -51,7 +55,7 @@ export default function UpdateBlockScreen({ currentVersion, latestVersion }) {
                 <div className="fixed inset-0 z-[500] flex items-center justify-center bg-gn-bg/80 backdrop-blur-sm">
                     <div className="flex flex-col items-center gap-4">
                         <div className="w-11 h-11 border-2 border-og-primary/30 border-t-gn-accent rounded-full animate-spin" />
-                        <p className="text-gn-muted text-sm">در حال خروج...</p>
+                        <p className="text-gn-muted text-sm">{t('updateBlock.exiting')}</p>
                     </div>
                 </div>
             )}
@@ -89,18 +93,18 @@ export default function UpdateBlockScreen({ currentVersion, latestVersion }) {
                 </div>
 
                 <div className="text-center space-y-2">
-                    <h1 className="text-og-body text-xl font-bold">آپدیت جدید</h1>
+                    <h1 className="text-og-body text-xl font-bold">{t('updateBlock.title')}</h1>
                     <p className="text-og-muted text-sm max-w-xs">{statusText}</p>
                 </div>
 
                 <div className="flex items-center gap-6 px-6 py-4 rounded-xl bg-og-subtle border border-og text-sm">
                     <div className="text-center">
-                        <div className="text-og-muted text-xs mb-1">ورژن فعلی</div>
+                        <div className="text-og-muted text-xs mb-1">{t('updateBlock.currentVersion')}</div>
                         <div className="font-mono text-og-muted">v{currentVersion}</div>
                     </div>
-                    <div className="text-og-muted text-lg">←</div>
+                    <div className="text-og-muted text-lg">{dir === 'rtl' ? '←' : '→'}</div>
                     <div className="text-center">
-                        <div className="text-og-muted text-xs mb-1">ورژن جدید</div>
+                        <div className="text-og-muted text-xs mb-1">{t('updateBlock.newVersion')}</div>
                         <div className="font-mono text-gn-accent font-semibold">v{latestVersion}</div>
                     </div>
                 </div>
@@ -118,7 +122,7 @@ export default function UpdateBlockScreen({ currentVersion, latestVersion }) {
                         />
                     </div>
                     <div className="flex justify-between text-xs" style={{ color: 'var(--og-muted)' }}>
-                        <span>{pct}% دانلود شد</span>
+                        <span>{t('updateBlock.percentDownloaded', { pct })}</span>
                     </div>
                 </div>
             </div>

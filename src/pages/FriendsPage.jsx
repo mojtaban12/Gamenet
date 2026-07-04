@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { MessageCircle, Search, X } from 'lucide-react'
 import { friendAPI } from '../api'
 import { usePresenceStore } from '../store/presenceStore'
@@ -10,12 +11,8 @@ import AppShell from '../components/AppShell'
 import FriendChat from '../components/FriendChat'
 import Icon from '../components/ui/Icon'
 
-const TABS = [
-    ['friends', (n) => `دوستان (${n})`],
-    ['requests', () => 'درخواست‌ها'],
-]
-
 export default function FriendsPage() {
+    const { t }                   = useTranslation()
     const [tab, setTab]           = useState('friends')
     const [searchQ, setSearchQ]   = useState('')
     const [searchRes, setSearchRes] = useState([])
@@ -27,6 +24,11 @@ export default function FriendsPage() {
     const { unreadCounts }        = useMessageStore()
     const [selectedFriend, setSelectedFriend] = useState(null)
     const friendsChatEnabled = useSettingStore(s => s.adminSettings['friends.chat.enabled']) !== 'false'
+
+    const TABS = [
+        ['friends', (n) => t('friends.tabFriends', { count: n })],
+        ['requests', () => t('friends.tabRequests')],
+    ]
 
     useEffect(() => {
         if (tab === 'requests') loadRequests()
@@ -48,7 +50,7 @@ export default function FriendsPage() {
             const res = await friendAPI.getRequests()
             setRequests(res.data)
         } catch (e) {
-            if (e.response) toast(e.response.data?.message || 'خطا در دریافت درخواست‌ها', 'error')
+            if (e.response) toast(e.response.data?.message || t('friends.loadRequestsError'), 'error')
         }
     }
 
@@ -58,7 +60,7 @@ export default function FriendsPage() {
             const res = await friendAPI.search(searchQ)
             setSearchRes(res.data)
         } catch (e) {
-            if (e.response) toast(e.response.data?.message || 'خطا در جستجو', 'error')
+            if (e.response) toast(e.response.data?.message || t('friends.searchError'), 'error')
         }
     }
 
@@ -66,9 +68,9 @@ export default function FriendsPage() {
         setSending(username)
         try {
             await friendAPI.sendRequest(username)
-            toast('درخواست دوستی ارسال شد', 'success')
+            toast(t('friends.requestSent'), 'success')
         } catch (e) {
-            toast(e.response?.data?.message || 'خطا در ارسال درخواست', 'error')
+            toast(e.response?.data?.message || t('friends.requestSendError'), 'error')
         } finally {
             setSending(null)
         }
@@ -77,12 +79,12 @@ export default function FriendsPage() {
     async function handleRespond(requestId, accept) {
         try {
             await friendAPI.respond(requestId, accept)
-            toast(accept ? 'دوست اضافه شد' : 'درخواست رد شد', accept ? 'success' : 'info')
+            toast(accept ? t('friends.friendAdded') : t('friends.requestRejected'), accept ? 'success' : 'info')
             loadRequests()
             const res = await friendAPI.getAll()
             setFriends(res.data)
         } catch (e) {
-            toast(e.response?.data?.message || 'خطا در پاسخ به درخواست', 'error')
+            toast(e.response?.data?.message || t('friends.respondError'), 'error')
         }
     }
 
@@ -94,11 +96,11 @@ export default function FriendsPage() {
     async function handleRemove(friendId, username) {
         try {
             await friendAPI.remove(friendId)
-            toast(`${username} از لیست دوستان حذف شد`, 'info')
+            toast(t('friends.removedFromList', { username }), 'info')
             const res = await friendAPI.getAll()
             setFriends(res.data)
         } catch (e) {
-            toast(e.response?.data?.message || 'خطا در حذف دوست', 'error')
+            toast(e.response?.data?.message || t('friends.removeError'), 'error')
         }
     }
 
@@ -110,8 +112,8 @@ export default function FriendsPage() {
             <div className="flex flex-col flex-1 min-h-0 min-w-0 og-panel overflow-hidden">
                 <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-og flex-shrink-0">
                     <div>
-                        <p className="og-label text-og-muted">پیام و شبکه</p>
-                        <h2 className="og-title text-xl text-og-accent">دوستان</h2>
+                        <p className="og-label text-og-muted">{t('friends.headerLabel')}</p>
+                        <h2 className="og-title text-xl text-og-accent">{t('friends.headerTitle')}</h2>
                     </div>
                     <div className="flex gap-1 p-1 rounded-lg bg-og-tab">
                         {TABS.map(([key, labelFn]) => (
@@ -135,10 +137,10 @@ export default function FriendsPage() {
                             <div className="px-2 pt-3 pb-2 shrink-0">
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
-                                        <Icon icon={Search} size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-og-muted pointer-events-none" />
+                                        <Icon icon={Search} size={14} className="absolute end-2.5 top-1/2 -translate-y-1/2 text-og-muted pointer-events-none" />
                                         <input
-                                            className="og-input w-full pr-8 text-xs py-1.5"
-                                            placeholder="جستجوی کاربر..."
+                                            className="og-input w-full pe-8 text-xs py-1.5"
+                                            placeholder={t('friends.searchPlaceholder')}
                                             value={searchQ}
                                             onChange={e => setSearchQ(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && handleSearch()}
@@ -149,7 +151,7 @@ export default function FriendsPage() {
                                             <Icon icon={X} size={14} />
                                         </button>
                                     ) : (
-                                        <button type="button" onClick={handleSearch} className="og-btn-primary px-3 py-1.5 text-xs shrink-0">جستجو</button>
+                                        <button type="button" onClick={handleSearch} className="og-btn-primary px-3 py-1.5 text-xs shrink-0">{t('common.search')}</button>
                                     )}
                                 </div>
                             </div>
@@ -170,7 +172,7 @@ export default function FriendsPage() {
                                                     onClick={() => handleSendRequest(u.username)}
                                                     disabled={sending === u.username}
                                                     className="og-btn-ghost px-3 py-1.5 text-xs disabled:opacity-40 shrink-0">
-                                                    {sending === u.username ? '...' : '+ افزودن'}
+                                                    {sending === u.username ? '...' : t('friends.add')}
                                                 </button>
                                             </div>
                                         ))}
@@ -178,7 +180,7 @@ export default function FriendsPage() {
                                 ) : (
                                     <>
                                         {onlineFriends.length > 0 && (
-                                            <FriendSection title={`آنلاین · ${onlineFriends.length}`}>
+                                            <FriendSection title={t('friends.onlineCount', { count: onlineFriends.length })}>
                                                 {onlineFriends.map(f => (
                                                     <FriendRow
                                                         key={f.friendId}
@@ -192,7 +194,7 @@ export default function FriendsPage() {
                                             </FriendSection>
                                         )}
                                         {offlineFriends.length > 0 && (
-                                            <FriendSection title={`آفلاین · ${offlineFriends.length}`}>
+                                            <FriendSection title={t('friends.offlineCount', { count: offlineFriends.length })}>
                                                 {offlineFriends.map(f => (
                                                     <FriendRow
                                                         key={f.friendId}
@@ -206,7 +208,7 @@ export default function FriendsPage() {
                                             </FriendSection>
                                         )}
                                         {friends.length === 0 && (
-                                            <p className="text-center py-12 text-og-muted text-sm">هنوز دوستی اضافه نکردید</p>
+                                            <p className="text-center py-12 text-og-muted text-sm">{t('friends.noFriendsYet')}</p>
                                         )}
                                     </>
                                 )}
@@ -220,8 +222,8 @@ export default function FriendsPage() {
                                 <Icon icon={MessageCircle} size="xl" className="opacity-25" />
                                 <p className="text-sm">
                                     {friendsChatEnabled
-                                        ? 'یک دوست را انتخاب کن تا گفتگو شروع شود'
-                                        : 'چت در حال حاضر غیرفعال است'}
+                                        ? t('friends.selectFriendPrompt')
+                                        : t('friends.chatDisabled')}
                                 </p>
                             </div>
                         )}
@@ -231,7 +233,7 @@ export default function FriendsPage() {
                         {tab === 'requests' && (
                             <div className="max-w-xl space-y-1">
                                 {requests.length === 0 ? (
-                                    <p className="text-center py-16 text-og-muted text-sm">درخواستی وجود ندارد</p>
+                                    <p className="text-center py-16 text-og-muted text-sm">{t('friends.noRequests')}</p>
                                 ) : requests.map(r => (
                                     <div key={r.id} className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-og-hover transition-colors">
                                         <div className="w-9 h-9 og-avatar-ring text-sm font-bold shrink-0">
@@ -239,11 +241,11 @@ export default function FriendsPage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="text-og-body text-sm font-semibold">{r.from}</div>
-                                            <div className="text-og-muted text-xs">درخواست دوستی</div>
+                                            <div className="text-og-muted text-xs">{t('friends.friendRequestLabel')}</div>
                                         </div>
                                         <div className="flex gap-2 shrink-0">
-                                            <button type="button" onClick={() => handleRespond(r.id, true)} className="og-btn-primary px-3 py-1.5 text-xs">قبول</button>
-                                            <button type="button" onClick={() => handleRespond(r.id, false)} className="og-btn-ghost px-3 py-1.5 text-xs">رد</button>
+                                            <button type="button" onClick={() => handleRespond(r.id, true)} className="og-btn-primary px-3 py-1.5 text-xs">{t('friends.accept')}</button>
+                                            <button type="button" onClick={() => handleRespond(r.id, false)} className="og-btn-ghost px-3 py-1.5 text-xs">{t('friends.reject')}</button>
                                         </div>
                                     </div>
                                 ))}
@@ -267,6 +269,7 @@ function FriendSection({ title, children }) {
 }
 
 function FriendRow({ friend, onRemove, onChat, isSelected, unread }) {
+    const { t } = useTranslation()
     return (
         <div
             role={onChat ? 'button' : undefined}
@@ -284,13 +287,13 @@ function FriendRow({ friend, onRemove, onChat, isSelected, unread }) {
                         ? <img src={friend.avatarUrl} className="w-full h-full object-cover" alt="" />
                         : friend.username[0].toUpperCase()}
                 </div>
-                <span className={`absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--og-surface)] ${
+                <span className={`absolute -bottom-0.5 -start-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--og-surface)] ${
                     friend.online ? 'bg-gn-green' : 'bg-gn-muted'
                 }`} />
             </div>
             <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate text-og-body">{friend.username}</div>
-                <div className="text-og-muted text-xs">{friend.online ? 'آنلاین' : 'آفلاین'}</div>
+                <div className="text-og-muted text-xs">{friend.online ? t('common.online') : t('common.offline')}</div>
             </div>
 
             {unread > 0 && (
@@ -303,7 +306,7 @@ function FriendRow({ friend, onRemove, onChat, isSelected, unread }) {
                 type="button"
                 onClick={e => { e.stopPropagation(); onRemove(friend.friendId, friend.username) }}
                 className="opacity-0 group-hover:opacity-100 text-og-muted hover:text-og-danger text-xs transition-opacity px-2 py-1 shrink-0">
-                حذف
+                {t('friends.remove')}
             </button>
         </div>
     )

@@ -1,14 +1,8 @@
+import { useTranslation } from 'react-i18next'
 import { RotateCw, Wifi, WifiOff, AlertCircle } from 'lucide-react'
 import { useSetupStore, PHASE, PHASE_PROGRESS, PHASE_LABEL } from '../store/setupStore'
 import { runSetup } from '../lib/setupRunner'
 import Icon from './ui/Icon'
-
-const STEPS = [
-    { phase: PHASE.CHECKING,    label: 'بررسی' },
-    { phase: PHASE.INSTALLING,  label: 'نصب'   },
-    { phase: PHASE.CONNECTING,  label: 'اتصال' },
-    { phase: PHASE.REGISTERING, label: 'ثبت'   },
-]
 
 const PHASE_ORDER = [PHASE.CHECKING, PHASE.INSTALLING, PHASE.CONNECTING, PHASE.REGISTERING, PHASE.DONE]
 
@@ -21,7 +15,15 @@ function stepState(stepPhase, currentPhase) {
 }
 
 export default function NetworkStatus() {
+    const { t } = useTranslation()
     const { phase, currentLog, logs, error } = useSetupStore()
+
+    const STEPS = [
+        { phase: PHASE.CHECKING,    label: t('networkStatus.stepChecking') },
+        { phase: PHASE.INSTALLING,  label: t('networkStatus.stepInstalling') },
+        { phase: PHASE.CONNECTING,  label: t('networkStatus.stepConnecting') },
+        { phase: PHASE.REGISTERING, label: t('networkStatus.stepRegistering') },
+    ]
 
     if (phase === PHASE.IDLE || phase === PHASE.DONE) return null
 
@@ -46,7 +48,7 @@ export default function NetworkStatus() {
                     : <Icon icon={Wifi} size="xs" className="shrink-0 animate-pulse" style={{ color: 'var(--og-primary)' }} />
                 }
                 <span className="text-xs font-semibold truncate" style={{ color: isError ? 'var(--gn-red)' : 'var(--og-primary)' }}>
-                    {isError ? 'مشکل در برقراری اتصال' : 'آماده‌سازی شبکه...'}
+                    {isError ? t('networkStatus.error') : t('networkStatus.preparing')}
                 </span>
             </div>
 
@@ -110,7 +112,7 @@ export default function NetworkStatus() {
                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,75,137,0.25)' }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,75,137,0.15)' }}>
                         <Icon icon={RotateCw} size={11} />
-                        تلاش مجدد
+                        {t('common.retry')}
                     </button>
                 </>
             )}

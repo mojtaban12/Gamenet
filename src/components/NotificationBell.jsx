@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Bell, Check, X } from 'lucide-react'
 import { notifAPI, friendAPI } from '../api'
 import { usePresenceStore } from '../store/presenceStore'
@@ -9,6 +10,7 @@ import { useNotificationStore } from '../store/notificationStore'
 import Icon from './ui/Icon'
 
 export default function NotificationBell() {
+    const { t } = useTranslation()
     const [open, setOpen]       = useState(false)
     const [notifs, setNotifs]   = useState([])      // friend req/accepted از MongoDB
     const [loading, setLoading] = useState(false)
@@ -61,10 +63,10 @@ export default function NotificationBell() {
             await friendAPI.respond(notif.referenceId, true)
             await notifAPI.markRead(notif.id)
             setNotifs(n => n.filter(x => x.id !== notif.id))
-            toast(`${notif.fromUsername} به دوستان اضافه شد`, 'success')
+            toast(t('notificationBell.addedToFriends', { username: notif.fromUsername }), 'success')
             setFriends((await friendAPI.getAll()).data)
         } catch (e) {
-            toast(e.response?.data?.message || 'خطا', 'error')
+            toast(e.response?.data?.message || t('common.error'), 'error')
         }
     }
 
@@ -96,7 +98,7 @@ export default function NotificationBell() {
     }
 
     function friendName(friendId) {
-        return friends.find(x => x.friendId?.toString() === friendId)?.username || 'کاربر'
+        return friends.find(x => x.friendId?.toString() === friendId)?.username || t('notificationBell.unknownUser')
     }
 
     return (
@@ -107,7 +109,7 @@ export default function NotificationBell() {
                 className="relative w-8 h-8 flex items-center justify-center rounded hover:bg-gn-panel text-gn-muted hover:text-gn-text transition-colors">
                 <Icon icon={Bell} size="sm" />
                 {totalCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-gn-red rounded-full flex items-center justify-center text-white text-xs font-bold leading-none">
+                    <span className="absolute -top-0.5 -end-0.5 w-4 h-4 bg-gn-red rounded-full flex items-center justify-center text-white text-xs font-bold leading-none">
             {totalCount > 9 ? '9+' : totalCount}
           </span>
                 )}
@@ -115,18 +117,18 @@ export default function NotificationBell() {
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute right-0 top-10 w-80 max-w-[calc(100vw-1rem)] bg-gn-surface border border-gn-border rounded-xl shadow-2xl z-[100] overflow-hidden animate-fade-in"
+                <div className="absolute end-0 top-10 w-80 max-w-[calc(100vw-1rem)] bg-gn-surface border border-gn-border rounded-xl shadow-2xl z-[100] overflow-hidden animate-fade-in"
                      style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
 
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gn-border">
             <span className="font-semibold text-sm text-gn-text">
-              اعلان‌ها
+              {t('notificationBell.title')}
             </span>
                         {notifs.length > 0 && (
                             <button onClick={handleMarkAllRead}
                                     className="text-gn-muted hover:text-gn-accent text-xs transition-colors">
-                                همه خوانده شد
+                                {t('notificationBell.markAllRead')}
                             </button>
                         )}
                     </div>
@@ -139,7 +141,7 @@ export default function NotificationBell() {
                             </div>
                         ) : totalCount === 0 ? (
                             <div className="text-center py-8 text-gn-muted text-sm">
-                                اعلانی وجود ندارد
+                                {t('notificationBell.empty')}
                             </div>
                         ) : (
                             <>
@@ -154,12 +156,12 @@ export default function NotificationBell() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                       <span className="text-gn-text text-xs font-semibold">
-                        {count === 1 ? 'پیام جدید' : `${count} پیام`} از {friendName(friendId)}
+                        {count === 1 ? t('notificationBell.newMessageOne') : t('notificationBell.newMessageMany', { count })} {t('notificationBell.fromUser', { username: friendName(friendId) })}
                       </span>
                                         </div>
                                         <button onClick={() => handleOpenChat(friendId)}
                                                 className="px-3 py-1.5 text-xs bg-gn-accent text-gn-bg rounded hover:opacity-90 transition-opacity flex-shrink-0">
-                                            مشاهده
+                                            {t('notificationBell.view')}
                                         </button>
                                     </div>
                                 ))}
@@ -184,6 +186,7 @@ export default function NotificationBell() {
 }
 
 function NotifItem({ notif, onAccept, onReject, onRead }) {
+    const { t } = useTranslation()
     // 1 = FriendRequest, 2 = FriendRequestAccepted
     if (notif.type === 1) {
         return (
@@ -194,20 +197,20 @@ function NotifItem({ notif, onAccept, onReject, onRead }) {
                     </div>
                     <div className="flex-1 min-w-0">
                         <span className="text-gn-text text-xs font-semibold">{notif.fromUsername}</span>
-                        <span className="text-gn-muted text-xs"> درخواست دوستی فرستاد</span>
+                        <span className="text-gn-muted text-xs"> {t('notificationBell.sentFriendRequest')}</span>
                     </div>
                     <span className="text-gn-muted text-xs flex-shrink-0">
-            {formatTime(notif.createdAt)}
+            {formatTime(notif.createdAt, t)}
           </span>
                 </div>
                 <div className="flex gap-2">
                     <button onClick={onAccept}
                             className="flex-1 py-1.5 text-xs bg-gn-accent2/80 text-white rounded hover:opacity-90 transition-opacity">
-                        قبول
+                        {t('notifications.accept')}
                     </button>
                     <button onClick={onReject}
                             className="flex-1 py-1.5 text-xs border border-gn-border text-gn-muted hover:text-gn-text rounded transition-colors">
-                        رد
+                        {t('notifications.reject')}
                     </button>
                 </div>
             </div>
@@ -222,10 +225,10 @@ function NotifItem({ notif, onAccept, onReject, onRead }) {
                 </div>
                 <div className="flex-1 min-w-0">
                     <span className="text-gn-text text-xs font-semibold">{notif.fromUsername}</span>
-                    <span className="text-gn-muted text-xs"> درخواست دوستی را قبول کرد</span>
+                    <span className="text-gn-muted text-xs"> {t('notificationBell.acceptedFriendRequest')}</span>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-gn-muted text-xs">{formatTime(notif.createdAt)}</span>
+                    <span className="text-gn-muted text-xs">{formatTime(notif.createdAt, t)}</span>
                     <button onClick={onRead} className="text-gn-muted hover:text-gn-text flex items-center justify-center w-5 h-5">
                         <Icon icon={X} size="xs" />
                     </button>
@@ -237,12 +240,12 @@ function NotifItem({ notif, onAccept, onReject, onRead }) {
     return null
 }
 
-function formatTime(dateStr) {
+function formatTime(dateStr, t) {
     const d = new Date(dateStr)
     const now = new Date()
     const diff = Math.floor((now - d) / 1000)
-    if (diff < 60)   return 'همین الان'
-    if (diff < 3600) return `${Math.floor(diff / 60)} دقیقه`
-    if (diff < 86400) return `${Math.floor(diff / 3600)} ساعت`
-    return `${Math.floor(diff / 86400)} روز`
+    if (diff < 60)   return t('notificationBell.timeJustNow')
+    if (diff < 3600) return t('notificationBell.timeMinutes', { count: Math.floor(diff / 60) })
+    if (diff < 86400) return t('notificationBell.timeHours', { count: Math.floor(diff / 3600) })
+    return t('notificationBell.timeDays', { count: Math.floor(diff / 86400) })
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Check } from 'lucide-react'
 import { netbirdAPI } from '../api'
 import { useNetbirdStore } from '../store/netbirdStore'
@@ -14,9 +15,9 @@ const STEPS = {
     DONE:     4,
 }
 
-const STEP_LABELS = ['بررسی سیستم', 'نصب ماژول', 'اتصال شبکه', 'ثبت هویت', 'آماده']
-
 export default function SetupPage() {
+    const { t } = useTranslation()
+    const STEP_LABELS = [t('setup.stepChecking'), t('setup.stepInstalling'), t('setup.stepConnecting'), t('setup.stepRegistering'), t('setup.stepDone')]
     const [step, setStep]   = useState(STEPS.CHECK)
     const [logs, setLogs]   = useState([])
     const [error, setError] = useState('')
@@ -50,37 +51,37 @@ export default function SetupPage() {
         try {
             // ── اگه electron نیست (browser dev) ───────────────────────
             if (!window.electron) {
-                addLog('حالت توسعه — بدون Electron', 'info')
+                addLog(t('setup.devMode'), 'info')
                 setTimeout(() => navigate('/home'), 1500)
                 return
             }
 
             // ── Step 1: چک نصب بودن NetBird ─────────────────────────
             setStep(STEPS.CHECK)
-            addLog('بررسی ماژول شبکه...')
+            addLog(t('setup.checkingModule'))
             const installed = await window.electron.netbird.isInstalled()
             let justInstalled = false
 
             if (!installed) {
                 // NetBird نصب نیست — صرف نظر از peerId، باید نصب کنیم
                 if (user?.netbirdPeerId) {
-                    addLog('ماژول شبکه حذف شده — نصب مجدد...')
+                    addLog(t('setup.moduleRemovedReinstall'))
                 } else {
-                    addLog('در حال نصب ماژول شبکه...')
+                    addLog(t('setup.installingModule'))
                 }
                 setStep(STEPS.INSTALL)
                 const installRes = await window.electron.netbird.install()
-                if (!installRes.success) throw new Error(installRes.error || 'خطا در نصب')
-                addLog('نصب با موفقیت انجام شد ✓', 'success')
+                if (!installRes.success) throw new Error(installRes.error || t('setup.installError'))
+                addLog(t('setup.installSuccess'), 'success')
                 justInstalled = true
 
                 // اگه قبلاً peerId داشت، باید reset بشه چون peer جدیده
                 if (user?.netbirdPeerId) {
-                    addLog('ثبت مجدد هویت شبکه لازم است...')
+                    addLog(t('setup.reregisterNeeded'))
                     updateUser({ ...user, netbirdPeerId: null })
                 }
             } else {
-                addLog('ماژول شبکه آماده است ✓', 'success')
+                addLog(t('setup.moduleReady'), 'success')
             }
 
             // ── Step 2: فقط اگه نت‌برد از قبل نصب بوده (نه تازه‌نصب) reconnect کن ──
@@ -88,11 +89,11 @@ export default function SetupPage() {
             // پس reconnect بدون key معنی نداره و SSO باز می‌کنه → مستقیم برو key+hostname
             let reconnectFailed = false
             if (user?.netbirdPeerId && !justInstalled) {
-                addLog('بررسی وضعیت اتصال...')
+                addLog(t('setup.checkingConnection'))
                 const status = await window.electron.netbird.status()
 
                 if (status.connected && status.ip) {
-                    addLog('متصل هستید ✓', 'success')
+                    addLog(t('setup.connected'), 'success')
                     setStatus(status)
                     setTimeout(() => navigate('/home'), 1000)
                     return
@@ -100,11 +101,11 @@ export default function SetupPage() {
 
                 // disconnect شده — تلاش برای reconnect بدون setup key
                 setStep(STEPS.CONNECT)
-                addLog('در حال reconnect...')
+                addLog(t('setup.reconnecting'))
 
                 const configRes = await netbirdAPI.getConfig()
                 const managementUrl = configRes.data?.managementUrl
-                if (!managementUrl) throw new Error('ManagementUrl تنظیم نشده')
+                if (!managementUrl) throw new Error(t('setup.managementUrlMissing'))
 
                 try {
                     await window.electron.netbird.connect({ managementUrl })
@@ -113,7 +114,7 @@ export default function SetupPage() {
                     await new Promise(r => setTimeout(r, 4000))
                     const after = await window.electron.netbird.status()
                     if (after?.connected && after?.ip) {
-                        addLog('متصل شدید ✓', 'success')
+                        addLog(t('setup.connectedExclaim'), 'success')
                         setStatus(after)
                         setStep(STEPS.DONE)
                         setTimeout(() => navigate('/home'), 1000)
@@ -121,22 +122,22 @@ export default function SetupPage() {
                     }
                     // وصل نشد → نیاز به ثبت مجدد با setup-key
                     reconnectFailed = true
-                    addLog('اتصال قبلی معتبر نیست — ثبت مجدد با کلید...', 'info')
+                    addLog(t('setup.oldConnectionInvalid'), 'info')
                 } catch {
                     reconnectFailed = true
-                    addLog('reconnect ناموفق — ثبت مجدد با کلید...', 'info')
+                    addLog(t('setup.reconnectFailed'), 'info')
                 }
             }
 
             // ── Step 3: گرفتن Setup Key ───────────────────────────────
             setStep(STEPS.CONNECT)
-            addLog('دریافت کلید اتصال از سرور...')
+            addLog(t('setup.gettingKey'))
 
             const keyRes = await netbirdAPI.getSetupKey()
 
             // اگه peer واقعاً روی سرور هست و reconnect هم لازم نبوده
             if (keyRes.data.alreadyRegistered && !reconnectFailed) {
-                addLog('اتصال قبلی شناسایی شد ✓', 'success')
+                addLog(t('setup.previousConnectionDetected'), 'success')
                 const status = await window.electron.netbird.status()
                 setStatus(status)
                 setTimeout(() => navigate('/home'), 1200)
@@ -145,24 +146,24 @@ export default function SetupPage() {
 
             const { setupKey, managementUrl } = keyRes.data
 
-            if (!managementUrl) throw new Error('ManagementUrl روی سرور تنظیم نشده')
-            if (!setupKey) throw new Error('Setup Key دریافت نشد')
+            if (!managementUrl) throw new Error(t('setup.managementUrlServerMissing'))
+            if (!setupKey) throw new Error(t('setup.setupKeyMissing'))
 
-            addLog(`کلید اتصال دریافت شد`)
-            addLog(`اتصال به ${managementUrl} ...`)
+            addLog(t('setup.keyReceived'))
+            addLog(t('setup.connectingTo', { url: managementUrl }))
 
             // ── Step 4: اجرای netbird up ──────────────────────────────
             const connectRes = await window.electron.netbird.connect({ managementUrl, setupKey, hostname: user?.username || user?.email })
 
-            if (!connectRes.success) throw new Error(connectRes.error || 'اتصال به شبکه برقرار نشد — اینترنت یا تنظیمات فایروال خود را بررسی کنید')
-            if (!connectRes.ip) throw new Error('IP از netbird دریافت نشد')
+            if (!connectRes.success) throw new Error(connectRes.error || t('setup.connectFailed'))
+            if (!connectRes.ip) throw new Error(t('setup.ipMissing'))
 
-            addLog('متصل شدید ✓', 'success')
+            addLog(t('setup.connectedExclaim'), 'success')
             setStatus(connectRes)
 
             // ── Step 5: پیدا کردن Peer ID از سرور با IP ──────────────
             setStep(STEPS.REGISTER)
-            addLog('دریافت شناسه شبکه از سرور...')
+            addLog(t('setup.gettingPeerId'))
 
             // چند بار تلاش می‌کنیم چون گاهی سرور NetBird کمی تاخیر داره
             let peerId = null
@@ -172,29 +173,29 @@ export default function SetupPage() {
                     peerId = peerRes.data?.id
                     if (peerId) break
                 } catch {
-                    addLog(`تلاش ${i + 1}/5 برای دریافت شناسه...`)
+                    addLog(t('setup.retryAttempt', { attempt: i + 1 }))
                     await sleep(2000)
                 }
             }
 
-            if (!peerId) throw new Error('شناسه شبکه از سرور دریافت نشد')
+            if (!peerId) throw new Error(t('setup.peerIdMissing'))
 
-            addLog(`شناسه دریافت شد: ${peerId.substring(0, 8)}...`)
+            addLog(t('setup.peerIdReceived', { id: peerId.substring(0, 8) }))
 
             // ── Step 6: ثبت Peer ID روی اکانت کاربر ─────────────────
             await netbirdAPI.registerPeer(peerId)
             updateUser({ ...user, netbirdPeerId: peerId })
 
-            addLog('هویت شبکه با موفقیت ثبت شد ✓', 'success')
+            addLog(t('setup.registeredSuccess'), 'success')
             setStep(STEPS.DONE)
-            addLog('آماده بازی هستید!', 'success')
+            addLog(t('setup.readyToPlay'), 'success')
 
             setTimeout(() => navigate('/home'), 1500)
 
         } catch (err) {
-            const msg = err.response?.data?.message || err.message || 'خطای ناشناخته'
+            const msg = err.response?.data?.message || err.message || t('setup.unknownError')
             setError(msg)
-            addLog(`خطا: ${msg}`, 'error')
+            addLog(t('setup.errorPrefix', { message: msg }), 'error')
         }
     }
 
@@ -204,9 +205,9 @@ export default function SetupPage() {
         <div className="flex-1 flex items-center justify-center p-8">
             <div className="w-full max-w-md animate-slide-up">
                 <h2 className="font-display font-bold text-2xl text-gn-text mb-1">
-                    راه‌اندازی اولیه
+                    {t('setup.title')}
                 </h2>
-                <p className="text-gn-muted text-sm mb-8">اتصال به شبکه بازی...</p>
+                <p className="text-gn-muted text-sm mb-8">{t('setup.subtitle')}</p>
 
                 {/* Progress steps */}
                 <div className="flex items-center mb-8">
@@ -258,7 +259,7 @@ export default function SetupPage() {
                             {error}
                         </div>
                         <button onClick={runSetup} className="gn-btn-ghost w-full">
-                            تلاش مجدد
+                            {t('common.retry')}
                         </button>
                     </div>
                 )}

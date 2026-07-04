@@ -10,6 +10,7 @@ import { useLobbyStore } from '../store/lobbyStore'
 import { friendAPI, messageAPI } from '../api'
 import { notify } from '../utils/notify'
 import { isOlderVersion } from '../utils/version'
+import i18n from '../i18n'
 
 const getApiUrl = () => import.meta.env.VITE_API_URL || 'http://localhost:5224'
 
@@ -87,7 +88,7 @@ export default function PresenceProvider({ children }) {
                 }
                 notify({
                     title: 'TarGame',
-                    body:  `${data.username} آنلاین شد`,
+                    body:  i18n.t('presence.friendOnline', { username: data.username }),
                     type:  'success',
                     sound: 'friendOnline',
                     toastDuration: 5000
@@ -103,7 +104,7 @@ export default function PresenceProvider({ children }) {
                 }
                 notify({
                     title: 'TarGame',
-                    body:  `${data.username} آفلاین شد`,
+                    body:  i18n.t('presence.friendOffline', { username: data.username }),
                     type:  'info',
                     sound: 'friendOffline',
                     toastDuration: 4000
@@ -120,8 +121,8 @@ export default function PresenceProvider({ children }) {
                 friendRequest({ requestId: data.requestId, fromId: data.fromId, username: data.username })
                 window.dispatchEvent(new CustomEvent('notif:new'))
                 notify({
-                    title: 'درخواست دوستی',
-                    body:  `${data.username} درخواست دوستی فرستاد`,
+                    title: i18n.t('presence.friendRequestTitle'),
+                    body:  i18n.t('presence.friendRequestBody', { username: data.username }),
                     type:  'info',
                     sound: 'friendRequest'
                 })
@@ -133,7 +134,7 @@ export default function PresenceProvider({ children }) {
                 loadFriends()
                 notify({
                     title: 'TarGame',
-                    body:  `${data.username} درخواست دوستی را قبول کرد`,
+                    body:  i18n.t('presence.friendRequestAcceptedBody', { username: data.username }),
                     type:  'success',
                     sound: 'notify',
                     toastDuration: 5000
@@ -178,11 +179,11 @@ export default function PresenceProvider({ children }) {
                 msgTimers.current[friendId] = setTimeout(() => {
                     const finalCount = useMessageStore.getState().msgNotifs[friendId]?.count || count
                     const body = finalCount === 1
-                        ? `پیام جدید از ${msg.senderName}`
-                        : `${finalCount} پیام از ${msg.senderName}`
+                        ? i18n.t('presence.newMessageOne', { username: msg.senderName })
+                        : i18n.t('presence.newMessageMany', { count: finalCount, username: msg.senderName })
 
                     notify({
-                        title: 'پیام جدید',
+                        title: i18n.t('presence.newMessageTitle'),
                         body,
                         type:  'info',
                         sound: 'message',
@@ -229,8 +230,8 @@ export default function PresenceProvider({ children }) {
                 setTimeout(() => {
                     if (isOwnNewSession()) return
                     notify({
-                        title: 'خروج از حساب',
-                        body: data?.reason || 'حساب شما روی دستگاه دیگری وارد شد',
+                        title: i18n.t('presence.logoutTitle'),
+                        body: data?.reason || i18n.t('presence.logoutBody'),
                         type: 'info',
                         sound: 'notify'
                     })
@@ -242,8 +243,8 @@ export default function PresenceProvider({ children }) {
             hub.on('LobbyInvite', (data) => {
                 invite({ fromId: data.fromId, username: data.username, groupId: data.groupId, groupName: data.groupName })
                 notify({
-                    title: 'دعوت به لابی',
-                    body:  `${data.username} شما را به «${data.groupName}» دعوت کرد`,
+                    title: i18n.t('presence.lobbyInviteTitle'),
+                    body:  i18n.t('presence.lobbyInviteBody', { username: data.username, groupName: data.groupName }),
                     type:  'info',
                     sound: 'invite'
                 })

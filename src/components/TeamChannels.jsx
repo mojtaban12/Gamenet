@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { LogIn, LogOut, Plus, X } from 'lucide-react'
 import { useVoiceStore } from '../store/voiceStore'
 import { useAuthStore } from '../store/authStore'
@@ -6,6 +7,7 @@ import { teamAPI } from '../api'
 import Icon from './ui/Icon'
 
 export default function TeamChannels({ groupId, isHost }) {
+    const { t } = useTranslation()
     const { channels, memberships, myChannelId } = useVoiceStore()
     const { user } = useAuthStore()
     const myUserId = user?.id?.toString()
@@ -52,12 +54,12 @@ export default function TeamChannels({ groupId, isHost }) {
     return (
         <div className="px-3 py-2 border-t border-og/50 flex-shrink-0">
             <div className="flex items-center justify-between mb-1.5">
-                <span className="og-label text-og-muted text-[11px]">کانال‌های صوتی</span>
+                <span className="og-label text-og-muted text-[11px]">{t('teamChannels.title')}</span>
                 {isHost && customCount < 2 && (
                     <button
                         type="button"
                         onClick={() => setCreating(s => !s)}
-                        title="افزودن تیم"
+                        title={t('teamChannels.addTeam')}
                         className="text-og-muted hover:text-og-accent transition-colors no-drag">
                         <Icon icon={Plus} size={12} />
                     </button>
@@ -69,7 +71,7 @@ export default function TeamChannels({ groupId, isHost }) {
                     <input
                         autoFocus
                         className="og-input flex-1 text-xs py-1 px-2 no-drag"
-                        placeholder="نام تیم..."
+                        placeholder={t('teamChannels.namePlaceholder')}
                         value={newName}
                         onChange={e => setNewName(e.target.value)}
                         onKeyDown={e => {
@@ -83,7 +85,7 @@ export default function TeamChannels({ groupId, isHost }) {
                         onClick={handleCreate}
                         disabled={loading === 'create' || !newName.trim()}
                         className="og-btn-primary text-xs px-2 py-1 disabled:opacity-40 no-drag">
-                        ایجاد
+                        {t('teamChannels.create')}
                     </button>
                     <button
                         type="button"
@@ -119,12 +121,12 @@ export default function TeamChannels({ groupId, isHost }) {
                                 <div className="flex items-center gap-1 min-w-0">
                                     <span className="text-xs font-medium text-og-body truncate">{ch.name}</span>
                                     {isMe && (
-                                        <span className="text-[9px] text-og-accent shrink-0">شما اینجایید</span>
+                                        <span className="text-[9px] text-og-accent shrink-0">{t('teamChannels.youAreHere')}</span>
                                     )}
                                 </div>
                                 {memberIds.length > 0 && (
                                     <div className="text-[10px] text-og-muted mt-0.5">
-                                        {memberIds.length} نفر
+                                        {t('teamChannels.memberCount', { count: memberIds.length })}
                                     </div>
                                 )}
                             </div>
@@ -136,7 +138,7 @@ export default function TeamChannels({ groupId, isHost }) {
                                         type="button"
                                         onClick={() => handleJoin(ch.id)}
                                         disabled={loading === ch.id}
-                                        title="ورود به کانال"
+                                        title={t('teamChannels.joinChannel')}
                                         className="flex items-center justify-center w-6 h-6 rounded text-og-muted hover:text-og-accent hover:bg-og-hover transition-colors disabled:opacity-40 no-drag">
                                         <Icon icon={LogIn} size={12} />
                                     </button>
@@ -147,7 +149,7 @@ export default function TeamChannels({ groupId, isHost }) {
                                         type="button"
                                         onClick={handleLeave}
                                         disabled={loading === 'leave'}
-                                        title="بازگشت به لابی"
+                                        title={t('teamChannels.backToLobby')}
                                         className="flex items-center justify-center w-6 h-6 rounded text-og-muted hover:text-og-body hover:bg-og-hover transition-colors disabled:opacity-40 no-drag">
                                         <Icon icon={LogOut} size={12} />
                                     </button>
@@ -158,7 +160,7 @@ export default function TeamChannels({ groupId, isHost }) {
                                         type="button"
                                         onClick={() => handleDelete(ch.id)}
                                         disabled={loading === ch.id}
-                                        title="حذف تیم"
+                                        title={t('teamChannels.deleteTeam')}
                                         className="flex items-center justify-center w-6 h-6 rounded text-og-muted hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 no-drag">
                                         <Icon icon={X} size={11} />
                                     </button>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Check, CirclePlus, Download, Gamepad2, Pencil, Search, Trash2, X } from 'lucide-react'
 import { applyGameMetaCache, storeGameMeta, isGameMetaCached } from '../utils/gameMetaCache'
 import Icon from './ui/Icon'
@@ -16,6 +17,7 @@ function normalizeName(s) {
  * مودال انتخاب بازی — تمام‌صفحه (portal به body)
  */
 export default function GameSelectModal({ games, customGames: customProp, selectedId, onSelect, onClose, canSelect = true }) {
+    const { t } = useTranslation()
     const [icons, setIcons]         = useState({})
     const [installed, setInstalled] = useState({})
     const [customGames, setCustom]  = useState(customProp || [])
@@ -174,12 +176,12 @@ export default function GameSelectModal({ games, customGames: customProp, select
                 <header className="flex items-center justify-between gap-4 px-6 py-4 border-b border-og flex-shrink-0">
                     <div>
                         <h3 id="game-select-title" className="og-title text-lg text-og-accent">
-                            {canSelect ? 'انتخاب بازی' : 'مدیریت بازی‌ها'}
+                            {canSelect ? t('gameSelect.titleSelect') : t('gameSelect.titleManage')}
                         </h3>
                         <p className="text-og-muted text-xs mt-0.5">
                             {canSelect
-                                ? 'بازی نصب‌شده را انتخاب یا بازی جدید اضافه کنید'
-                                : 'بازی را دانلود کنید یا فایل اجرایی آن را انتخاب کنید'}
+                                ? t('gameSelect.subtitleSelect')
+                                : t('gameSelect.subtitleManage')}
                         </p>
                     </div>
                     <button
@@ -194,12 +196,12 @@ export default function GameSelectModal({ games, customGames: customProp, select
                     <div className="px-6 pt-4 flex-shrink-0">
                         <div className="relative max-w-md">
                             <input
-                                className="og-input w-full py-2.5 pr-9"
-                                placeholder="جستجوی بازی..."
+                                className="og-input w-full py-2.5 pe-9"
+                                placeholder={t('gameSelect.searchPlaceholder')}
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
-                            <Icon icon={Search} size={15} className="absolute top-1/2 right-3 -translate-y-1/2 text-og-muted pointer-events-none" />
+                            <Icon icon={Search} size={15} className="absolute top-1/2 end-3 -translate-y-1/2 text-og-muted pointer-events-none" />
                         </div>
                     </div>
                 )}
@@ -208,21 +210,21 @@ export default function GameSelectModal({ games, customGames: customProp, select
                     {adding ? (
                         <div className="max-w-md mx-auto space-y-4">
                             <div>
-                                <label className="og-label text-og-muted block mb-1.5">نام بازی</label>
+                                <label className="og-label text-og-muted block mb-1.5">{t('gameSelect.gameName')}</label>
                                 <input
                                     className="og-input w-full py-2.5"
-                                    placeholder="مثلاً Age of Empires"
+                                    placeholder={t('gameSelect.gameNamePlaceholder')}
                                     value={newName}
                                     onChange={e => { setNewName(e.target.value); setNameError('') }}
                                     autoFocus
                                 />
                             </div>
                             <div>
-                                <label className="og-label text-og-muted block mb-1.5">فایل اجرایی (exe)</label>
+                                <label className="og-label text-og-muted block mb-1.5">{t('gameSelect.exeFile')}</label>
                                 <div className="flex gap-2">
                                     <input
                                         className="og-input flex-1 py-2.5 text-xs"
-                                        placeholder="مسیری انتخاب نشده"
+                                        placeholder={t('gameSelect.noPathSelected')}
                                         value={newExe}
                                         readOnly
                                     />
@@ -230,7 +232,7 @@ export default function GameSelectModal({ games, customGames: customProp, select
                                         type="button"
                                         onClick={pickExe}
                                         className="og-btn-ghost px-4 py-2.5 text-xs shrink-0">
-                                        انتخاب فایل
+                                        {t('gameSelect.pickFile')}
                                     </button>
                                 </div>
                             </div>
@@ -243,13 +245,13 @@ export default function GameSelectModal({ games, customGames: customProp, select
                                     onClick={saveCustom}
                                     disabled={!newName.trim() || !newExe}
                                     className="og-btn-primary flex-1 py-2.5 text-xs disabled:opacity-40">
-                                    افزودن
+                                    {t('gameSelect.addGame')}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => { setAdding(false); setNewName(''); setNewExe(''); setNameError('') }}
                                     className="og-btn-ghost px-4 py-2.5 text-xs">
-                                    انصراف
+                                    {t('common.cancel')}
                                 </button>
                             </div>
                         </div>
@@ -283,22 +285,22 @@ export default function GameSelectModal({ games, customGames: customProp, select
                                             </div>
                                             <div className="flex items-center justify-center gap-1 mt-1">
                                                 {g.isCustom ? (
-                                                    <span className="text-og-accent text-[10px]">شخصی</span>
+                                                    <span className="text-og-accent text-[10px]">{t('gameSelect.custom')}</span>
                                                 ) : isInst === undefined ? (
-                                                    <span className="text-og-muted text-[10px]">بررسی...</span>
+                                                    <span className="text-og-muted text-[10px]">{t('gameSelect.checking')}</span>
                                                 ) : isInst ? (
                                                     <>
                                                         <span className="w-1.5 h-1.5 rounded-full bg-gn-green" />
-                                                        <span className="text-gn-green text-[10px]">نصب شده</span>
+                                                        <span className="text-gn-green text-[10px]">{t('gameSelect.installed')}</span>
                                                     </>
                                                 ) : (
-                                                    <span className="text-og-muted text-[10px]">انتخاب فایل</span>
+                                                    <span className="text-og-muted text-[10px]">{t('gameSelect.pickFile')}</span>
                                                 )}
                                             </div>
                                         </div>
 
                                         {isSelected && (
-                                            <div className="absolute top-2 right-2 w-6 h-6 bg-og-primary rounded-full flex items-center justify-center">
+                                            <div className="absolute top-2 start-2 w-6 h-6 bg-og-primary rounded-full flex items-center justify-center">
                                                 <Icon icon={Check} size="xs" className="text-[var(--og-badge-text)]" strokeWidth={3} />
                                             </div>
                                         )}
@@ -307,19 +309,19 @@ export default function GameSelectModal({ games, customGames: customProp, select
                                         {g.downloadUrl && (
                                             <div
                                                 onClick={(e) => handleDownload(e, g)}
-                                                title="دانلود بازی"
-                                                className="absolute top-2 left-2 w-6 h-6 bg-black/60 hover:bg-og-primary/80 rounded-full flex items-center justify-center text-white cursor-pointer z-10">
+                                                title={t('gameSelect.downloadTitle')}
+                                                className="absolute top-2 end-2 w-6 h-6 bg-black/60 hover:bg-og-primary/80 rounded-full flex items-center justify-center text-white cursor-pointer z-10">
                                                 <Icon icon={Download} size={11} />
                                             </div>
                                         )}
 
                                         {/* دکمه‌های ویرایش/حذف (hover) */}
-                                        <div className={`absolute top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${g.downloadUrl ? 'left-9' : 'left-2'}`}>
+                                        <div className={`absolute top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${g.downloadUrl ? 'end-9' : 'end-2'}`}>
                                             {/* ویرایش exe — custom یا بازی سروری نصب‌شده */}
                                             {(g.isCustom || isInst) && (
                                                 <div
                                                     onClick={(e) => editExe(e, g)}
-                                                    title="تغییر فایل اجرایی"
+                                                    title={t('gameSelect.editExeTitle')}
                                                     className="w-6 h-6 bg-black/60 hover:bg-og-primary/80 rounded-full flex items-center justify-center text-white cursor-pointer">
                                                     <Icon icon={Pencil} size={11} />
                                                 </div>
@@ -328,7 +330,7 @@ export default function GameSelectModal({ games, customGames: customProp, select
                                             {g.isCustom && (
                                                 <div
                                                     onClick={(e) => removeCustom(e, g)}
-                                                    title="حذف بازی"
+                                                    title={t('gameSelect.deleteTitle')}
                                                     className="w-6 h-6 bg-black/60 hover:bg-red-500/80 rounded-full flex items-center justify-center text-white cursor-pointer">
                                                     <Icon icon={Trash2} size={11} />
                                                 </div>
@@ -344,13 +346,13 @@ export default function GameSelectModal({ games, customGames: customProp, select
                                     onClick={() => setAdding(true)}
                                     className="aspect-square rounded-xl border-2 border-dashed border-og flex flex-col items-center justify-center gap-2 text-og-muted hover:text-og-accent hover:border-og-primary transition-colors">
                                     <Icon icon={CirclePlus} size="lg" />
-                                    <span className="og-label text-[10px]">افزودن بازی</span>
+                                    <span className="og-label text-[10px]">{t('gameSelect.addGame')}</span>
                                 </button>
                             )}
 
                             {search && filteredGames.length === 0 && (
                                 <div className="col-span-full text-center text-og-muted text-sm py-12">
-                                    بازی‌ای یافت نشد
+                                    {t('gameSelect.notFound')}
                                 </div>
                             )}
                         </div>

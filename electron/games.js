@@ -2,6 +2,7 @@ const { execFile } = require('child_process')
 const { promisify } = require('util')
 const path = require('path')
 const fs = require('fs')
+const { EventEmitter } = require('events')
 const { GameStore } = require('./gameStore')
 const overlayNative = require('./overlay-native')
 
@@ -14,8 +15,9 @@ const execFileAsync = promisify(execFile)
  *   2. بازی custom (با id که custom_ شروع می‌شه)
  *   3. registry (برای بازی‌های سروری)
  */
-class GameManager {
+class GameManager extends EventEmitter {
     constructor() {
+        super()
         this.store = new GameStore()
     }
 
@@ -148,6 +150,18 @@ class GameManager {
         const child = require('child_process').spawn(exePath, [], {
             cwd, detached: true, stdio: 'ignore', windowsHide: false
         })
+
+        // Event-driven exit detection: Node/Windows tells us exactly when this
+        // process handle terminates — no tasklist polling, so a transient
+        // fullscreen-exclusive alt-tab (which can make tasklist miss the process
+        // for a beat) can no longer cause a false "game closed" detection.
+        // detached+unref only affect whether OUR process is kept alive/whether
+        // the child dies with us — the 'exit' event still fires reliably while
+        // Electron's main process (which holds this listener) is running.
+        child.on('exit', (code, signal) => {
+            this.emit('game-exit', { exeName, pid: child.pid, code, signal })
+        })
+
         child.unref()
 
         // Watch for game exit so we can clean up the DLL

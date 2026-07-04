@@ -258,12 +258,29 @@ class TincCLI {
      * سرویس ویندوز نمی‌سازیم — چون SCM با foreground process مشکل داره
      * و باعث قطع/وصل می‌شه. این روش پایداره و با بستن اپ هم قطع می‌شه.
      */
-    // Disable then re-enable the TAP adapter so Windows gives it proper routing
-    // priority before tincd opens it. Without this, on some systems the adapter
-    // is ignored by the game's network stack even though the IP is set.
+    // آداپتر رو disable/enable می‌کنه تا NDIS دوباره rebind بشه، ولی قبلش
+    // GUID دستگاه TAP رو در ابتدای HKLM\...\Tcpip\Linkage\Bind می‌ذاره.
+    // تنها متریک IP کافی نیست: بازی‌های قدیمی LAN آداپتر شبکه رو با
+    // enumeration سطح NDIS/Binding Order پیدا می‌کنن نه با متریک — و چون TAP
+    // همیشه آخرِ این لیست نصب می‌شه، همیشه آخرین انتخاب باقی می‌مونه. جابه‌جا
+    // کردنش به اول لیست، بعد rebind با disable/enable، هر بار قطعی‌تر جواب
+    // می‌ده تا صرفاً reset بدون reorder.
     async _resetAdapter() {
         const ps = `
 $name = '${ADAPTER_NAME}'
+$adapter = Get-NetAdapter -Name $name -ErrorAction SilentlyContinue
+if ($adapter) {
+    $device = "\\Device\\$($adapter.InterfaceGuid)"
+    $regPath = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Linkage'
+    try {
+        $bind = (Get-ItemProperty -Path $regPath -Name Bind -ErrorAction Stop).Bind
+        $bindList = New-Object System.Collections.Generic.List[string]
+        $bindList.AddRange([string[]]$bind)
+        $bindList.Remove($device) | Out-Null
+        $bindList.Insert(0, $device)
+        Set-ItemProperty -Path $regPath -Name Bind -Value $bindList.ToArray() -Type MultiString
+    } catch {}
+}
 Disable-NetAdapter -Name $name -Confirm:$false -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 800
 Enable-NetAdapter -Name $name -Confirm:$false -ErrorAction SilentlyContinue

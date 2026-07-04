@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next'
 import { LogOut } from 'lucide-react'
 import Icon from './ui/Icon'
 
 export default function LogoutModal({ onConfirm, onCancel, loggingOut = false }) {
+    const { t } = useTranslation()
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center no-drag">
             <div
@@ -19,7 +21,7 @@ export default function LogoutModal({ onConfirm, onCancel, loggingOut = false })
                 {loggingOut ? (
                     <div className="flex flex-col items-center py-6">
                         <div className="w-11 h-11 border-2 border-og-primary/30 border-t-og-accent rounded-full animate-spin mb-4" />
-                        <p className="og-title text-sm text-og-body">در حال خروج...</p>
+                        <p className="og-title text-sm text-og-body">{t('logoutModal.exiting')}</p>
                     </div>
                 ) : (
                     <>
@@ -30,10 +32,10 @@ export default function LogoutModal({ onConfirm, onCancel, loggingOut = false })
                         </div>
 
                         <h3 id="logout-modal-title" className="text-center og-title text-base text-og-body mb-2">
-                            خروج از حساب
+                            {t('logoutModal.title')}
                         </h3>
                         <p className="text-center text-og-muted text-sm mb-6 leading-relaxed">
-                            آیا مطمئن هستید که می‌خواهید از حساب کاربری خارج شوید؟
+                            {t('logoutModal.description')}
                         </p>
 
                         <div className="space-y-2">
@@ -41,13 +43,13 @@ export default function LogoutModal({ onConfirm, onCancel, loggingOut = false })
                                 type="button"
                                 onClick={onConfirm}
                                 className="og-btn-danger w-full py-2.5 text-sm">
-                                بله، خروج
+                                {t('logoutModal.confirm')}
                             </button>
                             <button
                                 type="button"
                                 onClick={onCancel}
                                 className="og-btn-ghost w-full py-2.5 text-sm">
-                                انصراف
+                                {t('common.cancel')}
                             </button>
                         </div>
                     </>

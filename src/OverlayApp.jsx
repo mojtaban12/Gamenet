@@ -1,9 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, MessageCircle, Users, Mic, MicOff, Volume2, Copy, Check } from 'lucide-react'
 import ChatTextarea from './components/ChatTextarea'
 import { parseHotkey } from './store/settingStore'
+import { useLocaleStore, getDir } from './store/localeStore'
 
 export default function OverlayApp() {
+    const { t } = useTranslation()
+    const locale = useLocaleStore(s => s.locale)
+    const dir = getDir(locale)
     const [visible, setVisible] = useState(false)
     const [state, setState] = useState(null)
     const [input, setInput] = useState('')
@@ -101,7 +106,7 @@ export default function OverlayApp() {
     const micOn = voiceConnected && micEnabled
 
     return (
-        <div className="fixed inset-0 flex justify-end" style={{ direction: 'rtl' }}>
+        <div className="fixed inset-0 flex justify-end" style={{ direction: dir }}>
             {/* click outside → close */}
             <div className="flex-1" onClick={close} />
 
@@ -127,7 +132,7 @@ export default function OverlayApp() {
                                 style={connected ? { boxShadow: '0 0 6px #22c55e' } : {}}
                             />
                             <h2 className="text-sm font-semibold truncate" style={{ color: 'var(--og-primary)' }}>
-                                {groupName || groupId || 'لابی'}
+                                {groupName || groupId || t('overlay.lobbyFallback')}
                             </h2>
                         </div>
                         {activeIp && (
@@ -138,7 +143,7 @@ export default function OverlayApp() {
                                 <button
                                     type="button"
                                     onClick={copyIp}
-                                    title="کپی IP"
+                                    title={t('overlay.copyIp')}
                                     className="flex items-center justify-center w-4 h-4 rounded transition-colors"
                                     style={{ color: ipCopied ? '#22c55e' : 'var(--og-muted)' }}
                                     onMouseEnter={e => { if (!ipCopied) e.currentTarget.style.color = 'var(--og-text)' }}
@@ -151,7 +156,7 @@ export default function OverlayApp() {
                     <button
                         type="button"
                         onClick={close}
-                        title="بستن (Esc)"
+                        title={t('overlay.close')}
                         className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors shrink-0"
                         style={{ color: 'var(--og-muted)' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--og-text)' }}
@@ -166,7 +171,7 @@ export default function OverlayApp() {
                         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <Users size={12} style={{ color: 'var(--og-muted)' }} />
                         <span className="text-[11px]" style={{ color: 'var(--og-muted)' }}>
-                            اعضا · {members.length}
+                            {t('overlay.members', { count: members.length })}
                         </span>
                     </div>
                     <div className="overflow-y-auto" style={{ maxHeight: '180px' }}>
@@ -192,7 +197,7 @@ export default function OverlayApp() {
                                             </div>
                                             {inVoice && (
                                                 <span
-                                                    className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border"
+                                                    className="absolute -bottom-0.5 -end-0.5 w-2 h-2 rounded-full border"
                                                     style={{
                                                         background: isSpeaking ? '#22c55e' : '#6b7280',
                                                         borderColor: 'rgba(10,10,18,0.88)',
@@ -205,13 +210,13 @@ export default function OverlayApp() {
                                             style={{ color: isSpeaking ? '#22c55e' : 'var(--og-text)' }}>
                                             {m.username || m.peerId?.substring(0, 10) || '?'}
                                             {isMe && (
-                                                <span className="text-[10px] mr-1" style={{ color: 'var(--og-primary)' }}>شما</span>
+                                                <span className="text-[10px] ms-1" style={{ color: 'var(--og-primary)' }}>{t('common.you')}</span>
                                             )}
                                         </span>
                                     </div>
                                     {/* ردیف دوم: آی‌پی */}
                                     {mIp && (
-                                        <div className="font-mono text-[10px] ltr mt-1 pr-8"
+                                        <div className="font-mono text-[10px] ltr mt-1 ps-8"
                                             style={{ color: 'var(--og-primary)', opacity: 0.75 }}>
                                             {mIp}
                                         </div>
@@ -228,7 +233,7 @@ export default function OverlayApp() {
                     style={{ borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <Volume2 size={12} style={{ color: 'var(--og-muted)' }} />
                     <span className="text-[11px] flex-1" style={{ color: 'var(--og-muted)' }}>
-                        وویس{participantIds.length > 0 ? ` · ${participantIds.length} نفر` : ''}
+                        {participantIds.length > 0 ? t('overlay.voiceLabelWithCount', { count: participantIds.length }) : t('overlay.voiceLabel')}
                     </span>
 
                     {/* Mic / Join button */}
@@ -247,18 +252,18 @@ export default function OverlayApp() {
                                         : { background: 'rgba(0,218,243,0.1)', color: 'var(--og-primary)' }
                         }
                         title={
-                            !voiceConnected ? 'پیوستن به وویس' :
-                            isPtt ? 'نگه دار U برای صحبت' :
-                            micOn ? 'قطع میکروفون' : 'روشن کردن میکروفون'
+                            !voiceConnected ? t('overlay.joinVoice') :
+                            isPtt ? t('overlay.holdToTalk') :
+                            micOn ? t('overlay.muteMic') : t('overlay.unmuteMic')
                         }>
                         {voiceConnecting
                             ? <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
                             : micOn ? <Mic size={11} /> : <MicOff size={11} />
                         }
                         <span>
-                            {!voiceConnected ? 'پیوستن' :
-                             isPtt ? 'U = صحبت' :
-                             micOn ? 'روشن' : 'قطع'}
+                            {!voiceConnected ? t('overlay.join') :
+                             isPtt ? t('overlay.pttLabel') :
+                             micOn ? t('overlay.on') : t('overlay.off')}
                         </span>
                     </button>
 
@@ -269,7 +274,7 @@ export default function OverlayApp() {
                             onClick={toggleVoiceMode}
                             className="px-2 py-1 rounded text-[10px] transition-colors"
                             style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--og-muted)' }}
-                            title={isPtt ? 'حالت فشار برای صحبت — کلیک برای تغییر' : 'حالت همیشه روشن — کلیک برای تغییر'}>
+                            title={isPtt ? t('overlay.pttModeTitle') : t('overlay.vaModeTitle')}>
                             {isPtt ? 'PTT' : 'VA'}
                         </button>
                     )}
@@ -280,13 +285,13 @@ export default function OverlayApp() {
                     <div className="px-4 py-2 shrink-0 flex items-center gap-1.5"
                         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <MessageCircle size={12} style={{ color: 'var(--og-muted)' }} />
-                        <span className="text-[11px]" style={{ color: 'var(--og-muted)' }}>چت لابی</span>
+                        <span className="text-[11px]" style={{ color: 'var(--og-muted)' }}>{t('overlay.chatTitle')}</span>
                     </div>
 
                     <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 space-y-2">
                         {messages.length === 0 ? (
                             <div className="text-center py-6 text-[11px] opacity-40" style={{ color: 'var(--og-muted)' }}>
-                                پیامی نیست
+                                {t('overlay.noMessages')}
                             </div>
                         ) : messages.slice(-50).map((msg, i) => (
                             msg.system ? (
@@ -316,7 +321,7 @@ export default function OverlayApp() {
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     color: 'var(--og-text)',
                                 }}
-                                placeholder="پیام..."
+                                placeholder={t('overlay.placeholder')}
                                 value={input}
                                 onChange={setInput}
                                 onSend={sendMessage}
@@ -331,7 +336,7 @@ export default function OverlayApp() {
                                 disabled={!input.trim() || !connected}
                                 className="px-3 py-2 rounded text-xs font-medium shrink-0 transition-opacity disabled:opacity-40"
                                 style={{ background: 'var(--og-primary)', color: '#001a20' }}>
-                                ارسال
+                                {t('common.send')}
                             </button>
                         </div>
                     </div>

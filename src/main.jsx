@@ -2,10 +2,16 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import OverlayApp from './OverlayApp'
+import './i18n'
+import { LOCALES, DEFAULT_LOCALE } from './i18n'
+import { applyLocale } from './store/localeStore'
 import './index.css'
 
 const savedTheme = localStorage.getItem('targame-theme') ?? localStorage.getItem('gamenet-theme')
 document.documentElement.setAttribute('data-theme', savedTheme === 'light' ? 'light' : 'dark')
+
+const savedLocale = localStorage.getItem('targame-locale')
+applyLocale(LOCALES[savedLocale] ? savedLocale : DEFAULT_LOCALE)
 
 const isOverlayWindow = !!window.overlayElectron
 

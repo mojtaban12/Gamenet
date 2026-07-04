@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Volume2, VolumeX, X, MessageCircle } from 'lucide-react'
 import { useOverlayStore } from '../store/overlayStore'
 import { useVoiceStore } from '../store/voiceStore'
@@ -19,6 +20,7 @@ export default function GameOverlay({
                                         messages, input, setInput, sendMessage, connected,
                                         selectedGame,
                                     }) {
+    const { t } = useTranslation()
     const { overlayMode, setOverlayMode } = useOverlayStore()
     const { speakingIds, mutedIds, toggleMuteUser } = useVoiceStore()
     const { friends } = usePresenceStore()
@@ -79,7 +81,7 @@ export default function GameOverlay({
                 {/* ── میدل: اعضا + mute + استریم (اسکرول) ── */}
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3">
                     <div className="flex items-center justify-between mb-2">
-                        <p className="og-label text-og-muted">اعضا ({members.length})</p>
+                        <p className="og-label text-og-muted">{t('gameOverlay.members', { count: members.length })}</p>
                         <VoiceControls groupId={groupId} userId={user?.id?.toString()} />
                     </div>
 
@@ -99,13 +101,13 @@ export default function GameOverlay({
                     <span className="text-og-body text-xs font-medium truncate">
                       {m.username || (m.peerId ? `${m.peerId.substring(0, 8)}...` : '?')}
                     </span>
-                                        {mine && <span className="text-og-accent text-[10px] mr-1">شما</span>}
+                                        {mine && <span className="text-og-accent text-[10px] ms-1">{t('common.you')}</span>}
                                     </div>
                                     {!mine && m.userId && (
                                         <button
                                             type="button"
                                             onClick={() => toggleMuteUser(m.userId)}
-                                            title={muted ? 'صدا وصل' : 'صدا قطع (برای شما)'}
+                                            title={muted ? t('gameOverlay.unmute') : t('gameOverlay.muteLocal')}
                                             className={`flex items-center justify-center w-6 h-6 rounded-lg shrink-0 transition-colors ${
                                                 muted ? 'text-red-400 hover:bg-red-500/15'
                                                     : speaking ? 'text-gn-green animate-pulse'
@@ -133,14 +135,14 @@ export default function GameOverlay({
 
                 {/* ── فوتر: چت (راست) + دوستان آنلاین (چپ) ── */}
                 <div className="shrink-0 border-t border-og flex" style={{ height: '48%' }}>
-                    {/* دوستان آنلاین — چپ */}
-                    <div className="w-1/3 min-w-0 border-l border-og flex flex-col overflow-hidden">
+                    {/* دوستان آنلاین */}
+                    <div className="w-1/3 min-w-0 border-e border-og flex flex-col overflow-hidden">
                         <div className="px-3 py-2 border-b border-og shrink-0">
-                            <span className="og-label text-og-muted text-[11px]">دوستان آنلاین</span>
+                            <span className="og-label text-og-muted text-[11px]">{t('gameOverlay.onlineFriends')}</span>
                         </div>
                         <div className="flex-1 min-h-0 overflow-y-auto px-2 py-1.5 space-y-1">
                             {onlineFriends.length === 0 ? (
-                                <div className="text-center text-og-muted text-[11px] py-3 opacity-60">کسی آنلاین نیست</div>
+                                <div className="text-center text-og-muted text-[11px] py-3 opacity-60">{t('gameOverlay.noOneOnline')}</div>
                             ) : onlineFriends.map(f => (
                                 <div key={f.friendId} className="flex items-center gap-1.5 py-1">
                                     <div className="w-6 h-6 og-avatar-ring text-[10px] font-bold shrink-0 overflow-hidden">
@@ -155,24 +157,24 @@ export default function GameOverlay({
                         </div>
                     </div>
 
-                    {/* چت — راست */}
+                    {/* چت */}
                     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
                         <div className="px-3 py-2 border-b border-og shrink-0 flex items-center gap-1.5">
                             <Icon icon={MessageCircle} size="xs" className="text-og-accent shrink-0" />
-                            <span className="og-label text-og-muted text-[11px]">چت لابی</span>
+                            <span className="og-label text-og-muted text-[11px]">{t('gameOverlay.chatTitle')}</span>
                         </div>
-                        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-2 space-y-2">
+                        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-2 space-y-2">
                             {messages.length === 0 ? (
-                                <div className="text-center text-og-muted text-[11px] py-4 opacity-60">پیامی نیست</div>
+                                <div className="text-center text-og-muted text-[11px] py-4 opacity-60">{t('gameOverlay.noMessages')}</div>
                             ) : messages.slice(-30).map(msg => (
                                 msg.system ? (
                                     <div key={msg.id} className="text-center">
                                         <span className="text-og-muted text-[10px]">{msg.message}</span>
                                     </div>
                                 ) : (
-                                    <div key={msg.id} className="flex flex-col">
+                                    <div key={msg.id} className="flex flex-col min-w-0">
                                         <span className="text-og-muted text-[10px]">{msg.senderName}</span>
-                                        <span className="text-og-body text-xs break-words whitespace-pre-wrap">{msg.message}</span>
+                                        <span dir="auto" className="text-og-body text-xs break-words [overflow-wrap:anywhere] whitespace-pre-wrap min-w-0">{msg.message}</span>
                                     </div>
                                 )
                             ))}
@@ -181,7 +183,7 @@ export default function GameOverlay({
                             <div className="flex gap-1.5 items-end">
                                 <ChatTextarea
                                     className="og-input flex-1 min-w-0 py-1.5 text-xs"
-                                    placeholder="پیام..."
+                                    placeholder={t('gameOverlay.placeholder')}
                                     value={input}
                                     onChange={setInput}
                                     onSend={sendMessage}
@@ -193,7 +195,7 @@ export default function GameOverlay({
                                     onClick={sendMessage}
                                     disabled={!input.trim() || !connected}
                                     className="og-btn-primary px-3 py-1.5 text-xs shrink-0">
-                                    ارسال
+                                    {t('common.send')}
                                 </button>
                             </div>
                         </div>

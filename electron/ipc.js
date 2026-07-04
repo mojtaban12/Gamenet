@@ -52,6 +52,18 @@ function setupIpcHandlers(ipcMain, mainWindow, callbacks = {}) {
 
     const send = (channel, data) => mainWindow?.webContents.send(channel, data)
 
+    // Event-driven game-exit detection (see games.js `launch()` — the child
+    // process's own 'exit' event, not tasklist polling). When the currently
+    // tracked active game's process actually terminates, clear activeGame and
+    // tell the renderer immediately. Registered once here since setupIpcHandlers
+    // runs a single time at app startup.
+    gameManager.on('game-exit', ({ exeName }) => {
+        if (activeGame && activeGame.exeName === exeName) {
+            activeGame = null
+            send('games:exited', { exeName })
+        }
+    })
+
     // ─────────────── WINDOW CONTROLS ─────────────────────────────────
 
     ipcMain.on('window:minimize', () => mainWindow?.minimize())

@@ -84,6 +84,13 @@ contextBridge.exposeInMainWorld('electron', {
         getCustom:       ()                 => ipcRenderer.invoke('games:get-custom'),
         removeCustom:    (gameId)           => ipcRenderer.invoke('games:remove-custom', gameId),
         updateCustom:    (gameId, exePath, name) => ipcRenderer.invoke('games:update-custom', gameId, exePath, name),
+        // Event-driven exit notification (fires once, right when the OS actually
+        // tears down the launched game's process — see games.js/ipc.js).
+        onExited:        (cb) => {
+            const listener = (_, data) => cb(data)
+            ipcRenderer.on('games:exited', listener)
+            return () => ipcRenderer.removeListener('games:exited', listener)
+        },
     },
 
     openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),

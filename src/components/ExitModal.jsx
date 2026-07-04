@@ -1,7 +1,10 @@
+import { useTranslation } from 'react-i18next'
 import { LogOut } from 'lucide-react'
 import Icon from './ui/Icon'
 
-export default function ExitModal({ onQuit, onMinimize, onCancel, quitting = false }) {
+export default function ExitModal({ source = 'window', onQuit, onMinimize, onLogout, onCancel, quitting = false }) {
+    const { t } = useTranslation()
+    const fromSidebar = source === 'sidebar'
     return (
         <div className="fixed inset-0 z-[300] flex items-center justify-center">
             <div
@@ -16,7 +19,7 @@ export default function ExitModal({ onQuit, onMinimize, onCancel, quitting = fal
                 {quitting ? (
                     <div className="flex flex-col items-center py-6">
                         <div className="w-11 h-11 border-2 border-og-primary/30 border-t-og-accent rounded-full animate-spin mb-4" />
-                        <p className="og-title text-sm text-og-body">در حال خروج...</p>
+                        <p className="og-title text-sm text-og-body">{t('exitModal.exiting')}</p>
                     </div>
                 ) : (
                     <>
@@ -27,10 +30,12 @@ export default function ExitModal({ onQuit, onMinimize, onCancel, quitting = fal
                         </div>
 
                         <h3 className="text-center og-title text-base text-og-body mb-1">
-                            خروج از TarGame
+                            {fromSidebar ? t('exitModal.titleSidebar') : t('exitModal.titleWindow')}
                         </h3>
                         <p className="text-center text-og-muted text-xs mb-6">
-                            اتصال شبکه بازی قطع خواهد شد
+                            {fromSidebar
+                                ? t('exitModal.descSidebar')
+                                : t('exitModal.descWindow')}
                         </p>
 
                         <div className="space-y-2">
@@ -38,19 +43,28 @@ export default function ExitModal({ onQuit, onMinimize, onCancel, quitting = fal
                                 type="button"
                                 onClick={onQuit}
                                 className="og-btn-danger w-full py-2.5 text-sm">
-                                خروج از برنامه
+                                {t('exitModal.quitApp')}
                             </button>
-                            <button
-                                type="button"
-                                onClick={onMinimize}
-                                className="og-btn-ghost w-full py-2.5 text-sm">
-                                کوچک کردن
-                            </button>
+                            {fromSidebar ? (
+                                <button
+                                    type="button"
+                                    onClick={onLogout}
+                                    className="og-btn-ghost w-full py-2.5 text-sm">
+                                    {t('exitModal.logout')}
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={onMinimize}
+                                    className="og-btn-ghost w-full py-2.5 text-sm">
+                                    {t('exitModal.minimize')}
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={onCancel}
                                 className="w-full py-2.5 rounded-lg text-og-muted hover:text-og-body transition-colors text-sm">
-                                انصراف
+                                {t('common.cancel')}
                             </button>
                         </div>
                     </>

@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Home, Swords, Users, History, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useNetbirdStore } from '../store/netbirdStore'
@@ -7,13 +8,6 @@ import { useLobbyStore } from '../store/lobbyStore'
 import NetworkStatus from './NetworkStatus'
 import UpdateBar from './UpdateBar'
 import Icon from './ui/Icon'
-
-const NAV_ITEMS = [
-    { id: 'home', icon: Home, label: 'خانه', path: '/home' },
-    { id: 'rooms', icon: Swords, label: 'لابی‌ها', path: '/rooms' },
-    { id: 'friends', icon: Users, label: 'دوستان', path: '/friends' },
-    { id: 'history', icon: History, label: 'تاریخچه', path: null },
-]
 
 function getActiveNavId(pathname) {
     if (pathname === '/home') return 'home'
@@ -54,7 +48,7 @@ function NavSubItem({ label, active, onClick }) {
                 e.stopPropagation()
                 onClick?.(e)
             }}
-            className={`relative z-10 w-full flex items-center gap-2 pr-9 pl-3 py-2 rounded-lg text-xs transition-colors truncate ${
+            className={`relative z-10 w-full flex items-center gap-2 ps-9 pe-3 py-2 rounded-lg text-xs transition-colors truncate ${
                 active ? 'og-nav-item-active border' : 'og-nav-item border border-transparent'
             }`}>
             <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-og-accent opacity-70" />
@@ -64,16 +58,24 @@ function NavSubItem({ label, active, onClick }) {
 }
 
 export default function AppSidebar() {
+    const { t } = useTranslation()
     const navigate = useNavigate()
     const location = useLocation()
     const { user } = useAuthStore()
     const { connected, reconnecting } = useNetbirdStore()
     const isAdmin = user?.role === 'Admin'
-    const openLogoutModal = useUiStore(s => s.openLogoutModal)
+    const openExitModal = useUiStore(s => s.openExitModal)
     const activeLobby = useLobbyStore(s => s.activeLobby)
     const activeId = getActiveNavId(location.pathname)
     const isOnLobbyPage = location.pathname.startsWith('/lobby/')
     const lobbyLabel = activeLobby?.groupName || activeLobby?.groupId
+
+    const NAV_ITEMS = [
+        { id: 'home', icon: Home, label: t('sidebar.home'), path: '/home' },
+        { id: 'rooms', icon: Swords, label: t('sidebar.rooms'), path: '/rooms' },
+        { id: 'friends', icon: Users, label: t('sidebar.friends'), path: '/friends' },
+        { id: 'history', icon: History, label: t('sidebar.history'), path: null },
+    ]
 
     return (
         <div className="w-64 shrink-0 min-h-0 flex flex-col overflow-hidden p-4">
@@ -82,7 +84,7 @@ export default function AppSidebar() {
                     <button
                         type="button"
                         onClick={() => navigate('/profile')}
-                        className={`relative z-10 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-right ${
+                        className={`relative z-10 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-start ${
                             activeId === 'profile'
                                 ? 'og-nav-item-active border'
                                 : 'og-nav-item border border-transparent'
@@ -97,7 +99,7 @@ export default function AppSidebar() {
                                 }
                             </div>
                             <span
-                                className={`absolute -bottom-0.5 -left-0.5 w-3.5 h-3.5 rounded-full border-2 border-gn-bg ${
+                                className={`absolute -bottom-0.5 -start-0.5 w-3.5 h-3.5 rounded-full border-2 border-gn-bg ${
                                     connected
                                         ? 'bg-gn-green shadow-[0_0_6px_var(--og-success-glow)]'
                                         : reconnecting
@@ -111,7 +113,7 @@ export default function AppSidebar() {
                                 {user?.username}
                             </div>
                             <div className="text-[11px] mt-0.5 opacity-60">
-                                {connected ? 'آنلاین' : reconnecting ? 'در حال اتصال مجدد...' : 'آفلاین'}
+                                {connected ? t('common.online') : reconnecting ? t('common.reconnecting') : t('common.offline')}
                             </div>
                         </div>
                     </button>
@@ -145,7 +147,7 @@ export default function AppSidebar() {
                         <div className="mb-2">
                             <NavItem
                                 icon={ShieldCheck}
-                                label="مدیریت"
+                                label={t('sidebar.admin')}
                                 active={activeId === 'admin'}
                                 onClick={() => navigate('/admin')}
                             />
@@ -155,9 +157,9 @@ export default function AppSidebar() {
                     <NetworkStatus />
                     <button
                         type="button"
-                        onClick={openLogoutModal}
+                        onClick={() => openExitModal('sidebar')}
                         className="og-btn-danger w-full relative z-10">
-                        خروج
+                        {t('sidebar.logout')}
                     </button>
                 </div>
             </div>

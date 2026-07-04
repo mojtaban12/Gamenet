@@ -60,16 +60,20 @@
     body {
         background: var(--gn-bg);
         color: var(--gn-text);
-        font-family: 'IRANYekanX', sans-serif;
-        direction: rtl;
+        font-family: 'IRANYekanX', 'Segoe UI', sans-serif;
+        direction: inherit;
         overflow: hidden;
         user-select: none;
         -webkit-app-region: no-drag;
         transition: background-color 0.2s ease, color 0.2s ease;
     }
 
+    html[dir="ltr"] body {
+        font-family: 'Segoe UI', 'IRANYekanX', sans-serif;
+    }
+
     input, textarea, select {
-        direction: rtl;
+        direction: inherit;
         user-select: text;
         -webkit-user-select: text;
         -webkit-app-region: no-drag;

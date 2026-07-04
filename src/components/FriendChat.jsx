@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Smile } from 'lucide-react'
 import { messageAPI } from '../api'
 import { useMessageStore } from '../store/messageStore'
@@ -10,6 +11,7 @@ import ChatTextarea from './ChatTextarea'
 import Icon from './ui/Icon'
 
 export default function FriendChat({ friend }) {
+    const { t, i18n }             = useTranslation()
     const [input, setInput]       = useState('')
     const [loading, setLoading]   = useState(true)
     const [loadingOlder, setLoadingOlder] = useState(false)
@@ -114,17 +116,17 @@ export default function FriendChat({ friend }) {
                             ? <img src={friend.avatarUrl} className="w-full h-full object-cover" alt="" />
                             : friend.username[0].toUpperCase()}
                     </div>
-                    <span className={`absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--og-surface)] ${
+                    <span className={`absolute -bottom-0.5 -end-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--og-surface)] ${
                         friend.online ? 'bg-gn-green' : 'bg-gn-muted'
                     }`} />
                 </div>
                 <div className="min-w-0">
                     <div className="text-og-body text-sm font-semibold truncate">{friend.username}</div>
-                    <div className="text-og-muted text-xs">{friend.online ? 'آنلاین' : 'آفلاین'}</div>
+                    <div className="text-og-muted text-xs">{friend.online ? t('common.online') : t('common.offline')}</div>
                 </div>
             </div>
 
-            <div ref={messagesRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 space-y-3">
+            <div ref={messagesRef} onScroll={onScroll} className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 space-y-3">
                 {loadingOlder && (
                     <div className="flex justify-center py-1">
                         <div className="w-4 h-4 border-2 border-og-primary/30 border-t-og-primary rounded-full animate-spin" />
@@ -136,7 +138,7 @@ export default function FriendChat({ friend }) {
                     </div>
                 ) : messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-og-muted text-sm">
-                        شروع گفتگو با {friend.username}
+                        {t('friendChat.startConversationWith', { username: friend.username })}
                     </div>
                 ) : (
                     messages.map((msg, i) => {
@@ -151,13 +153,13 @@ export default function FriendChat({ friend }) {
                                         </span>
                                     </div>
                                 )}
-                                <div className={`flex ${isMine ? 'justify-start' : 'justify-end'}`}>
-                                    <div className={`max-w-[75%] px-3.5 py-2 text-sm rounded-xl ${
+                                <div className={`flex min-w-0 w-full ${isMine ? 'justify-start' : 'justify-end'}`}>
+                                    <div className={`min-w-0 max-w-[75%] px-3.5 py-2 text-sm rounded-xl ${
                                         isMine ? 'bg-og-primary-dim text-og-body' : 'bg-og-subtle text-og-body'
                                     }`}>
-                                        <p className="leading-relaxed selectable whitespace-pre-wrap break-words">{msg.message}</p>
+                                        <p dir="auto" className="leading-relaxed selectable whitespace-pre-wrap break-words [overflow-wrap:anywhere] min-w-0">{msg.message}</p>
                                         <p className="text-og-muted text-[10px] mt-1 opacity-70" dir="ltr">
-                                            {new Date(msg.sentAt).toLocaleTimeString('fa', { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(msg.sentAt).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
                                 </div>
@@ -170,7 +172,7 @@ export default function FriendChat({ friend }) {
             <div className="min-h-[20px] px-4 flex items-center">
                 {isTyping && (
                     <span className="flex items-center gap-1.5 text-og-muted text-xs">
-                        {isTyping} در حال نوشتن
+                        {t('friendChat.typing', { name: isTyping })}
                         <span className="flex gap-0.5 items-end pb-0.5">
                             <span className="w-1 h-1 rounded-full bg-og-muted animate-bounce" style={{ animationDelay: '0ms' }} />
                             <span className="w-1 h-1 rounded-full bg-og-muted animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -190,7 +192,7 @@ export default function FriendChat({ friend }) {
                 <div className="flex gap-2 items-end">
                     <ChatTextarea
                         className="og-input flex-1 py-2.5 no-drag"
-                        placeholder="پیام بنویس..."
+                        placeholder={t('friendChat.placeholder')}
                         value={input}
                         onChange={(v) => {
                             setInput(v)
@@ -217,7 +219,7 @@ export default function FriendChat({ friend }) {
                         type="submit"
                         disabled={!input.trim()}
                         className="og-btn-primary px-4 py-2.5 text-xs shrink-0">
-                        ارسال
+                        {t('common.send')}
                     </button>
                 </div>
             </form>

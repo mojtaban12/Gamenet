@@ -1,25 +1,27 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const EMOJI_CATEGORIES = {
-    'پرکاربرد': ['😀', '😂', '🤣', '😊', '😍', '🥰', '😎', '🤔', '😅', '😭', '😡', '👍', '👎', '❤️', '🔥', '💯', '🎮', '🎯', '✅', '❌'],
-    'چهره‌ها': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🫡', '🤭', '🤫', '🫢'],
-    'حرکات': ['👍', '👎', '👌', '🤌', '🤏', '✌️', '🤞', '🫰', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤝', '🙏', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '💪', '🦾'],
-    'گیمینگ': ['🎮', '🕹️', '🎯', '🎲', '♟️', '🃏', '🎰', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '👾', '🤖', '💀', '☠️', '⚔️', '🛡️', '🗡️', '🔫', '💣', '🧨', '⚡', '🔥', '💥', '✨', '🎆', '🎇'],
-    'دل و عشق': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️'],
-    'نمادها': ['💯', '✅', '❌', '⭕', '❗', '❓', '💢', '💬', '💭', '🔔', '🔕', '🎵', '🎶', '💤', '💨', '💦', '🌟', '⭐', '🌈', '☀️', '🌙', '⚡'],
+    frequent: ['😀', '😂', '🤣', '😊', '😍', '🥰', '😎', '🤔', '😅', '😭', '😡', '👍', '👎', '❤️', '🔥', '💯', '🎮', '🎯', '✅', '❌'],
+    faces: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🫡', '🤭', '🤫', '🫢'],
+    gestures: ['👍', '👎', '👌', '🤌', '🤏', '✌️', '🤞', '🫰', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤝', '🙏', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '💪', '🦾'],
+    gaming: ['🎮', '🕹️', '🎯', '🎲', '♟️', '🃏', '🎰', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '👾', '🤖', '💀', '☠️', '⚔️', '🛡️', '🗡️', '🔫', '💣', '🧨', '⚡', '🔥', '💥', '✨', '🎆', '🎇'],
+    love: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️'],
+    symbols: ['💯', '✅', '❌', '⭕', '❗', '❓', '💢', '💬', '💭', '🔔', '🔕', '🎵', '🎶', '💤', '💨', '💦', '🌟', '⭐', '🌈', '☀️', '🌙', '⚡'],
 }
 
 const CATEGORY_TABS = [
-    { id: 'پرکاربرد', icon: '⭐' },
-    { id: 'چهره‌ها', icon: '😊' },
-    { id: 'حرکات', icon: '👍' },
-    { id: 'گیمینگ', icon: '🎮' },
-    { id: 'دل و عشق', icon: '❤️' },
-    { id: 'نمادها', icon: '💯' },
+    { id: 'frequent', icon: '⭐' },
+    { id: 'faces', icon: '😊' },
+    { id: 'gestures', icon: '👍' },
+    { id: 'gaming', icon: '🎮' },
+    { id: 'love', icon: '❤️' },
+    { id: 'symbols', icon: '💯' },
 ]
 
 export default function EmojiPicker({ onSelect, onClose, className = '' }) {
-    const [category, setCategory] = useState('پرکاربرد')
+    const { t } = useTranslation()
+    const [category, setCategory] = useState('frequent')
     const ref = useRef(null)
 
     useEffect(() => {
@@ -44,8 +46,8 @@ export default function EmojiPicker({ onSelect, onClose, className = '' }) {
         <div
             ref={ref}
             role="dialog"
-            aria-label="انتخاب ایموجی"
-            className={`absolute bottom-full mb-2 right-0 z-50 w-[17rem] max-w-[calc(100vw-1.5rem)] rounded-xl border border-og overflow-hidden animate-fade-in no-drag ${className}`}
+            aria-label={t('emoji.pickerLabel')}
+            className={`absolute bottom-full mb-2 end-0 z-50 w-[17rem] max-w-[calc(100vw-1.5rem)] rounded-xl border border-og overflow-hidden animate-fade-in no-drag ${className}`}
             style={{
                 background: 'color-mix(in srgb, var(--og-surface) 92%, transparent)',
                 backdropFilter: 'blur(20px)',
@@ -59,7 +61,7 @@ export default function EmojiPicker({ onSelect, onClose, className = '' }) {
                         <button
                             key={tab.id}
                             type="button"
-                            aria-label={tab.id}
+                            aria-label={t(`emoji.${tab.id}`)}
                             aria-pressed={active}
                             onClick={() => setCategory(tab.id)}
                             className={`flex-shrink-0 w-7 h-7 rounded-full text-[15px] leading-none transition-all ${

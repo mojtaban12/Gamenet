@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Crown, Gamepad2, RefreshCw, Users, Mic } from 'lucide-react'
 import { adminAPI } from '../api'
 import AppShell from '../components/AppShell'
@@ -7,6 +8,7 @@ import Icon from '../components/ui/Icon'
 const REFRESH_INTERVAL = 10_000
 
 export default function AdminPage() {
+    const { t, i18n } = useTranslation()
     const [lobbies,   setLobbies]   = useState([])
     const [loading,   setLoading]   = useState(true)
     const [error,     setError]     = useState('')
@@ -22,7 +24,7 @@ export default function AdminPage() {
             setLastAt(new Date())
             setCountdown(REFRESH_INTERVAL / 1000)
         } catch (e) {
-            setError(e.response?.data?.message || 'خطا در بارگذاری')
+            setError(e.response?.data?.message || t('admin.loadError'))
         } finally {
             setLoading(false)
         }
@@ -49,21 +51,21 @@ export default function AdminPage() {
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between mb-5">
                     <div>
-                        <h1 className="og-title text-lg text-og-accent">مدیریت لابی‌ها</h1>
+                        <h1 className="og-title text-lg text-og-accent">{t('admin.title')}</h1>
                         <p className="text-og-muted text-xs mt-0.5">
                             {lastAt
-                                ? `آخرین بروزرسانی: ${lastAt.toLocaleTimeString('fa')} · بروزرسانی بعدی در ${countdown}s`
-                                : 'در حال بارگذاری...'}
+                                ? t('admin.lastUpdate', { time: lastAt.toLocaleTimeString(i18n.language), countdown })
+                                : t('common.loading')}
                         </p>
                     </div>
                     <button
                         type="button"
                         onClick={fetch}
                         disabled={loading}
-                        title="بروزرسانی"
+                        title={t('lobbyList.refresh')}
                         className="flex items-center gap-1.5 px-3 py-2 og-btn-ghost text-xs disabled:opacity-50 no-drag">
                         <Icon icon={RefreshCw} size={13} className={loading ? 'animate-spin' : ''} />
-                        <span>بروزرسانی</span>
+                        <span>{t('lobbyList.refresh')}</span>
                     </button>
                 </div>
 
@@ -78,7 +80,7 @@ export default function AdminPage() {
                 {!loading && !error && lobbies.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-og-muted">
                         <Icon icon={Users} size={32} className="mb-3 opacity-30" />
-                        <p className="text-sm">هیچ لابی فعالی وجود ندارد</p>
+                        <p className="text-sm">{t('admin.noActiveLobbies')}</p>
                     </div>
                 )}
 
@@ -94,6 +96,7 @@ export default function AdminPage() {
 }
 
 function LobbyCard({ lobby }) {
+    const { t } = useTranslation()
     const {
         groupId, groupName, memberCount,
         members = [], gameName, isPlaying,
@@ -112,7 +115,7 @@ function LobbyCard({ lobby }) {
                     {isPlaying && (
                         <span className="flex items-center gap-1 text-gn-green text-[11px]">
                             <span className="w-1.5 h-1.5 rounded-full bg-gn-green animate-pulse" />
-                            در حال بازی
+                            {t('admin.playing')}
                         </span>
                     )}
                     <span className="flex items-center gap-1 text-og-muted text-[11px]">
@@ -126,18 +129,18 @@ function LobbyCard({ lobby }) {
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-og-subtle">
                 <Icon icon={Gamepad2} size={14} className="text-og-muted shrink-0" />
                 <span className="text-xs text-og-body flex-1 min-w-0 truncate">
-                    {gameName || 'هیچ بازی‌ای انتخاب نشده'}
+                    {gameName || t('admin.noGameSelected')}
                 </span>
                 {isPlaying && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-gn-green/15 text-gn-green shrink-0">
-                        فعال
+                        {t('admin.active')}
                     </span>
                 )}
             </div>
 
             {/* ── Members ── */}
             <div>
-                <p className="og-label text-og-muted text-[11px] mb-1.5">اعضا</p>
+                <p className="og-label text-og-muted text-[11px] mb-1.5">{t('admin.members')}</p>
                 <div className="space-y-1">
                     {members.map(m => (
                         <MemberRow key={m.userId} member={m} />
@@ -150,7 +153,7 @@ function LobbyCard({ lobby }) {
                 <div>
                     <p className="og-label text-og-muted text-[11px] mb-1.5 flex items-center gap-1">
                         <Icon icon={Mic} size={10} />
-                        کانال‌های صوتی
+                        {t('admin.voiceChannels')}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                         {channels.map(ch => (
@@ -175,6 +178,7 @@ function LobbyCard({ lobby }) {
 }
 
 function MemberRow({ member }) {
+    const { t } = useTranslation()
     const { username, isHost, channelId, channelName } = member
     const inCustomChannel = channelId && channelId !== 'lobby'
 
@@ -190,7 +194,7 @@ function MemberRow({ member }) {
                 {isHost && (
                     <span className="flex items-center gap-0.5 text-[9px] text-yellow-400 shrink-0">
                         <Icon icon={Crown} size={9} />
-                        میزبان
+                        {t('admin.host')}
                     </span>
                 )}
                 {inCustomChannel && (

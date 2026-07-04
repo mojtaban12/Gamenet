@@ -1,15 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, RotateCw, Wifi } from 'lucide-react'
 import { useSetupStore, PHASE, PHASE_PROGRESS } from '../store/setupStore'
 import { runSetup } from '../lib/setupRunner'
 import Icon from './ui/Icon'
-
-const STEPS = [
-    { phase: PHASE.CHECKING,    label: 'بررسی سیستم' },
-    { phase: PHASE.INSTALLING,  label: 'نصب ماژول'   },
-    { phase: PHASE.CONNECTING,  label: 'اتصال شبکه'  },
-    { phase: PHASE.REGISTERING, label: 'ثبت هویت'    },
-]
 
 const PHASE_ORDER = [PHASE.CHECKING, PHASE.INSTALLING, PHASE.CONNECTING, PHASE.REGISTERING, PHASE.DONE]
 
@@ -23,9 +17,17 @@ function stepState(stepPhase, currentPhase) {
 }
 
 export default function NetworkGateBanner() {
+    const { t } = useTranslation()
     const { phase, logs, currentLog, error } = useSetupStore()
     const [expanded, setExpanded] = useState(false)
     const logRef = useRef(null)
+
+    const STEPS = [
+        { phase: PHASE.CHECKING,    label: t('networkGate.stepChecking') },
+        { phase: PHASE.INSTALLING,  label: t('networkGate.stepInstalling') },
+        { phase: PHASE.CONNECTING,  label: t('networkGate.stepConnecting') },
+        { phase: PHASE.REGISTERING, label: t('networkGate.stepRegistering') },
+    ]
 
     useEffect(() => {
         if (expanded && logRef.current) {
@@ -60,10 +62,10 @@ export default function NetworkGateBanner() {
                 {/* Text */}
                 <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold" style={{ color: isError ? 'var(--gn-red)' : 'var(--og-primary)' }}>
-                        {isError ? 'خطا در راه‌اندازی شبکه' : 'شبکه در حال آماده‌سازی...'}
+                        {isError ? t('networkGate.error') : t('networkGate.preparing')}
                     </div>
                     <div className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--og-muted)' }}>
-                        {isError ? error : (currentLog || 'لطفاً صبر کنید...')}
+                        {isError ? error : (currentLog || t('networkGate.pleaseWait'))}
                     </div>
                 </div>
 
@@ -78,7 +80,7 @@ export default function NetworkGateBanner() {
                             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,75,137,0.25)' }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,75,137,0.15)' }}>
                             <Icon icon={RotateCw} size={11} />
-                            تلاش مجدد
+                            {t('common.retry')}
                         </button>
                     )}
                     <button
@@ -88,7 +90,7 @@ export default function NetworkGateBanner() {
                         style={{ color: 'var(--og-muted)', border: '1px solid rgba(255,255,255,0.08)' }}
                         onMouseEnter={e => { e.currentTarget.style.color = 'var(--og-text)' }}
                         onMouseLeave={e => { e.currentTarget.style.color = 'var(--og-muted)' }}>
-                        جزئیات
+                        {t('networkGate.details')}
                         <Icon icon={expanded ? ChevronUp : ChevronDown} size={11} />
                     </button>
                 </div>
@@ -156,7 +158,7 @@ export default function NetworkGateBanner() {
                         maxHeight: '140px',
                         color: 'var(--og-muted)',
                     }}>
-                    {logs.length === 0 && <div className="opacity-40">در انتظار شروع...</div>}
+                    {logs.length === 0 && <div className="opacity-40">{t('networkGate.waitingToStart')}</div>}
                     {logs.map(l => (
                         <div key={l.id} className={`flex gap-2 ${
                             l.type === 'error'   ? 'text-red-400'

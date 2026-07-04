@@ -1,35 +1,38 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     User,
     Lock,
-    Wallet,
     Package,
     Trophy,
     Camera,
     Settings,
     Keyboard,
+    Languages,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useNetbirdStore } from '../store/netbirdStore'
 import { useNotificationStore } from '../store/notificationStore'
 import { authAPI, uploadAPI } from '../api'
 import { useSettingStore, SETTING_DEFAULTS, codeToToken } from '../store/settingStore'
+import { useLocaleStore } from '../store/localeStore'
+import { LOCALES } from '../i18n'
 import AppShell from '../components/AppShell'
 import Icon from '../components/ui/Icon'
 
-const TABS = [
-    { id: 'profile',  icon: User,     label: 'پروفایل' },
-    { id: 'settings', icon: Settings, label: 'تنظیمات' },
-    { id: 'wallet',   icon: Wallet,   label: 'کیف پول',  soon: true },
-    { id: 'assets',   icon: Package,  label: 'دارایی‌ها', soon: true },
-    { id: 'ranking',  icon: Trophy,   label: 'رنکینگ',   soon: true },
-]
-
 export default function ProfilePage() {
+    const { t } = useTranslation()
     const { user, updateUser } = useAuthStore()
     const { connected, ip, reconnecting } = useNetbirdStore()
     const { toast } = useNotificationStore()
     const { settings, update: updateSetting } = useSettingStore()
+
+    const TABS = [
+        { id: 'profile',  icon: User,     label: t('profile.tabProfile') },
+        { id: 'settings', icon: Settings, label: t('profile.tabSettings') },
+        { id: 'assets',   icon: Package,  label: t('profile.tabAssets'), soon: true },
+        { id: 'ranking',  icon: Trophy,   label: t('profile.tabRanking'),   soon: true },
+    ]
 
     const [tab, setTab] = useState('profile')
     const [avatarPreview,  setAvatarPreview]  = useState(user?.avatarUrl ?? null)
@@ -46,11 +49,11 @@ export default function ProfilePage() {
         const file = e.target.files?.[0]
         if (!file) return
         if (!file.type.startsWith('image/')) {
-            toast('فقط فایل تصویری مجاز است', 'error')
+            toast(t('profile.imageOnly'), 'error')
             return
         }
         if (file.size > 5 * 1024 * 1024) {
-            toast('حجم فایل نباید بیشتر از ۵ مگابایت باشد', 'error')
+            toast(t('profile.maxFileSize'), 'error')
             return
         }
 
@@ -62,9 +65,9 @@ export default function ProfilePage() {
             setAvatarPreview(data.url)
             // آواتار رو در auth store هم آپدیت کن تا همه‌جا (مثل sidebar) بلافاصله عوض شه
             updateUser({ ...useAuthStore.getState().user, avatarUrl: data.url })
-            toast('تصویر پروفایل با موفقیت ذخیره شد', 'success')
+            toast(t('profile.avatarSaved'), 'success')
         } catch {
-            toast('خطا در آپلود تصویر', 'error')
+            toast(t('profile.avatarUploadError'), 'error')
             setAvatarPreview(user?.avatarUrl ?? null)
         } finally {
             setAvatarUploading(false)
@@ -76,21 +79,21 @@ export default function ProfilePage() {
         setPasswordError('')
 
         if (passwordForm.next !== passwordForm.confirm) {
-            setPasswordError('رمز عبور جدید با تکرار آن یکسان نیست')
+            setPasswordError(t('profile.passwordMismatch'))
             return
         }
         if (passwordForm.next.length < 6) {
-            setPasswordError('رمز عبور جدید باید حداقل ۶ کاراکتر باشد')
+            setPasswordError(t('profile.passwordTooShort'))
             return
         }
 
         setPasswordLoading(true)
         try {
             await authAPI.changePassword(passwordForm.current, passwordForm.next)
-            toast('رمز عبور با موفقیت تغییر یافت', 'success')
+            toast(t('profile.passwordChanged'), 'success')
             setPasswordForm({ current: '', next: '', confirm: '' })
         } catch (err) {
-            setPasswordError(err.response?.data?.message || 'خطا در تغییر رمز عبور')
+            setPasswordError(err.response?.data?.message || t('profile.passwordChangeError'))
         } finally {
             setPasswordLoading(false)
         }
@@ -103,7 +106,7 @@ export default function ProfilePage() {
 
     return (
         <AppShell>
-            <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+            <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden pe-4">
                 <nav className="flex-shrink-0 flex items-stretch h-12 border-b border-og">
                     {TABS.map(item => {
                         const active = tab === item.id
@@ -122,7 +125,7 @@ export default function ProfilePage() {
                                     <Icon icon={item.icon} size="sm" />
                                     <span>{item.label}</span>
                                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-og-primary-dim border border-og-primary/30 text-og-muted font-medium leading-none">
-                                        به‌زودی
+                                        {t('profile.comingSoon')}
                                     </span>
                                 </span>
                             )
@@ -141,13 +144,16 @@ export default function ProfilePage() {
                     })}
                 </nav>
 
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-6 pr-4 space-y-4">
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-6 space-y-4">
                     {tab === 'settings' && (
-                        <HotkeySettings
-                            settings={settings}
-                            onUpdate={updateSetting}
-                            toast={toast}
-                        />
+                        <>
+                            <LanguageSettings />
+                            <HotkeySettings
+                                settings={settings}
+                                onUpdate={updateSetting}
+                                toast={toast}
+                            />
+                        </>
                     )}
 
                     {tab === 'profile' && (
@@ -170,21 +176,21 @@ export default function ProfilePage() {
                             />
 
                             <section className="og-card rounded-xl p-5 space-y-4">
-                                <h2 className="og-title text-base text-og-body">اطلاعات پروفایل</h2>
+                                <h2 className="og-title text-base text-og-body">{t('profile.profileInfo')}</h2>
                                 <div className="space-y-3">
-                                    <Field label="نام کاربری" value={username} mono />
-                                    <Field label="ایمیل" value={email} mono ltr />
+                                    <Field label={t('profile.username')} value={username} mono />
+                                    <Field label={t('profile.email')} value={email} mono ltr />
                                 </div>
                             </section>
 
                             <section className="og-card rounded-xl p-5 space-y-4">
                                 <div className="flex items-center gap-2">
                                     <Icon icon={Lock} size="md" className="text-og-accent" />
-                                    <h2 className="og-title text-base text-og-body">تغییر رمز عبور</h2>
+                                    <h2 className="og-title text-base text-og-body">{t('profile.changePassword')}</h2>
                                 </div>
                                 <form onSubmit={handlePasswordSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl">
                                     <div className="space-y-1">
-                                        <label className="og-label text-og-muted text-[11px]">رمز فعلی</label>
+                                        <label className="og-label text-og-muted text-[11px]">{t('profile.currentPassword')}</label>
                                         <input
                                             type="password"
                                             className="og-input ltr w-full"
@@ -196,7 +202,7 @@ export default function ProfilePage() {
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="og-label text-og-muted text-[11px]">رمز جدید</label>
+                                        <label className="og-label text-og-muted text-[11px]">{t('profile.newPassword')}</label>
                                         <input
                                             type="password"
                                             className="og-input ltr w-full"
@@ -208,7 +214,7 @@ export default function ProfilePage() {
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="og-label text-og-muted text-[11px]">تکرار رمز جدید</label>
+                                        <label className="og-label text-og-muted text-[11px]">{t('profile.confirmPassword')}</label>
                                         <input
                                             type="password"
                                             className="og-input ltr w-full"
@@ -229,7 +235,7 @@ export default function ProfilePage() {
                                             type="submit"
                                             disabled={passwordLoading || !passwordForm.current || !passwordForm.next || !passwordForm.confirm}
                                             className="og-btn-primary px-6 py-2">
-                                            {passwordLoading ? 'در حال ذخیره...' : 'ذخیره رمز عبور'}
+                                            {passwordLoading ? t('profile.saving') : t('profile.savePassword')}
                                         </button>
                                     </div>
                                 </form>
@@ -247,12 +253,13 @@ export default function ProfilePage() {
 }
 
 function ProfileHero({ username, avatarPreview, avatarUploading, connected, reconnecting, ip, onAvatarClick }) {
+    const { t } = useTranslation()
     const initial = username?.[0]?.toUpperCase() ?? '?'
-    const statusLabel = connected ? 'آنلاین' : reconnecting ? 'در حال اتصال مجدد...' : 'آفلاین'
+    const statusLabel = connected ? t('common.online') : reconnecting ? t('common.reconnecting') : t('common.offline')
 
     return (
         <div className="og-card rounded-xl p-5 flex items-start gap-5">
-            <div className="flex-1 min-w-0 space-y-2 text-right">
+            <div className="flex-1 min-w-0 space-y-2 text-start">
                 <h2 className="og-title text-xl text-og-body truncate">{username}</h2>
                 <p className="text-og-muted text-sm font-mono ltr truncate">@{username}</p>
                 <div className="flex items-center justify-start gap-3 pt-1">
@@ -263,7 +270,7 @@ function ProfileHero({ username, avatarPreview, avatarUploading, connected, reco
                 </div>
                 {ip && (
                     <div className="flex items-center justify-start gap-1.5 pt-0.5">
-                        <span className="og-label text-og-muted text-[11px]">آی‌پی شبکه:</span>
+                        <span className="og-label text-og-muted text-[11px]">{t('profile.networkIp')}</span>
                         <span className="text-og-body text-xs font-mono ltr">{ip}</span>
                     </div>
                 )}
@@ -274,7 +281,7 @@ function ProfileHero({ username, avatarPreview, avatarUploading, connected, reco
                 onClick={onAvatarClick}
                 disabled={avatarUploading}
                 className="relative group shrink-0 disabled:cursor-default"
-                title="تغییر تصویر پروفایل">
+                title={t('profile.changeAvatar')}>
                 <div className="w-24 h-24 og-avatar-ring overflow-hidden">
                     {avatarPreview ? (
                         <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
@@ -307,22 +314,57 @@ function Field({ label, value, mono, ltr }) {
     )
 }
 
-const HOTKEY_ROWS = [
-    { key: 'hotkey.voice.mute',     label: 'قطع/وصل میکروفون',   hint: 'در حالت همیشه روشن' },
-    { key: 'hotkey.voice.ptt',      label: 'فشار برای صحبت (PTT)', hint: 'نگه داشتن کلید' },
-    { key: 'hotkey.overlay.toggle', label: 'باز/بستن اورلی',       hint: 'کلید جهانی در بازی' },
+function LanguageSettings() {
+    const { t } = useTranslation()
+    const locale = useLocaleStore(s => s.locale)
+    const setLocale = useLocaleStore(s => s.setLocale)
+
+    return (
+        <section className="og-card rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2">
+                <Icon icon={Languages} size="md" className="text-og-accent" />
+                <h2 className="og-title text-base text-og-body">{t('settings.language')}</h2>
+            </div>
+            <p className="text-og-muted text-xs">
+                {t('settings.languageDescription')}
+            </p>
+            <div className="flex gap-2 max-w-md">
+                {Object.entries(LOCALES).map(([code, meta]) => (
+                    <button
+                        key={code}
+                        type="button"
+                        onClick={() => setLocale(code)}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                            locale === code
+                                ? 'border-og-primary bg-og-primary-dim text-og-accent'
+                                : 'border-og text-og-muted hover:text-og-body hover:border-og-primary/50'
+                        }`}>
+                        <span>{meta.flag}</span>
+                        <span>{meta.label}</span>
+                    </button>
+                ))}
+            </div>
+        </section>
+    )
+}
+
+const HOTKEY_ROWS_KEYS = [
+    { key: 'hotkey.voice.mute',     labelKey: 'profile.hotkeyMicMute',     hintKey: 'profile.hotkeyMicMuteHint' },
+    { key: 'hotkey.voice.ptt',      labelKey: 'profile.hotkeyPtt',         hintKey: 'profile.hotkeyPttHint' },
+    { key: 'hotkey.overlay.toggle', labelKey: 'profile.hotkeyOverlayToggle', hintKey: 'profile.hotkeyOverlayToggleHint' },
 ]
 
 function HotkeySettings({ settings, onUpdate, toast }) {
+    const { t } = useTranslation()
     const [saving, setSaving] = useState(null)
 
     async function handleChange(key, value) {
         setSaving(key)
         try {
             await onUpdate(key, value)
-            toast('میانبر ذخیره شد', 'success', 2000)
+            toast(t('profile.hotkeySaved'), 'success', 2000)
         } catch {
-            toast('خطا در ذخیره میانبر', 'error')
+            toast(t('profile.hotkeySaveError'), 'error')
         } finally {
             setSaving(null)
         }
@@ -332,17 +374,17 @@ function HotkeySettings({ settings, onUpdate, toast }) {
         <section className="og-card rounded-xl p-5 space-y-4">
             <div className="flex items-center gap-2">
                 <Icon icon={Keyboard} size="md" className="text-og-accent" />
-                <h2 className="og-title text-base text-og-body">کلیدهای میانبر</h2>
+                <h2 className="og-title text-base text-og-body">{t('profile.hotkeysTitle')}</h2>
             </div>
             <p className="text-og-muted text-xs">
-                برای تغییر هر کلید، روی آن کلیک کنید و کلید مورد نظر را فشار دهید.
+                {t('profile.hotkeysDescription')}
             </p>
             <div className="space-y-3 max-w-lg">
-                {HOTKEY_ROWS.map(row => (
+                {HOTKEY_ROWS_KEYS.map(row => (
                     <div key={row.key} className="flex items-center justify-between gap-4">
                         <div className="min-w-0">
-                            <div className="text-og-body text-sm">{row.label}</div>
-                            <div className="text-og-muted text-[11px]">{row.hint}</div>
+                            <div className="text-og-body text-sm">{t(row.labelKey)}</div>
+                            <div className="text-og-muted text-[11px]">{t(row.hintKey)}</div>
                         </div>
                         <HotkeyInput
                             value={settings[row.key] ?? SETTING_DEFAULTS[row.key]}
@@ -357,6 +399,7 @@ function HotkeySettings({ settings, onUpdate, toast }) {
 }
 
 function ComingSoonPanel({ tab }) {
+    const { t } = useTranslation()
     if (!tab) return null
 
     return (
@@ -364,13 +407,14 @@ function ComingSoonPanel({ tab }) {
             <Icon icon={tab.icon} size="lg" className="text-og-accent opacity-50 mb-4" />
             <h2 className="og-title text-lg text-og-body">{tab.label}</h2>
             <p className="text-og-muted text-sm mt-2 max-w-sm">
-                این بخش در نسخه‌های بعدی اضافه می‌شود.
+                {t('profile.comingSoonBody')}
             </p>
         </div>
     )
 }
 
 function HotkeyInput({ value, disabled, onConfirm }) {
+    const { t } = useTranslation()
     const [recording, setRecording] = useState(false)
     const [draft,     setDraft]     = useState(value)
 
@@ -424,8 +468,7 @@ function HotkeyInput({ value, disabled, onConfirm }) {
                         ? 'border-og opacity-50 cursor-default bg-og-panel text-og-muted'
                         : 'border-og bg-og-panel text-og-body hover:border-og-primary cursor-pointer'
             }`}>
-            {recording ? 'ضبط...' : (disabled ? '...' : draft)}
+            {recording ? t('profile.recording') : (disabled ? '...' : draft)}
         </button>
     )
 }
-

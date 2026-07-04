@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { authAPI } from '../api'
 import { useAuthStore } from '../store/authStore'
 import appIcon from '../../assets/icon-256.png'
 
 export default function AuthPage() {
+    const { t } = useTranslation()
     // mode: 'login' | 'register' | 'forgot' | 'reset'
     const [mode, setMode] = useState('login')
     const [form, setForm] = useState({ username: '', email: '', password: '' })
@@ -35,7 +37,7 @@ export default function AuthPage() {
             if (mode === 'login') {
                 res = await authAPI.login({ email: form.email, password: form.password })
             } else {
-                if (!form.username.trim()) { setError('نام کاربری الزامی است'); setLoading(false); return }
+                if (!form.username.trim()) { setError(t('auth.usernameRequired')); setLoading(false); return }
                 res = await authAPI.register(form)
             }
             await login(res.data.token, res.data.user)
@@ -43,9 +45,9 @@ export default function AuthPage() {
         } catch (err) {
             if (!err.response) {
                 // Global interceptor already showed a toast — echo it inline so the form also reacts
-                setError('اتصال اینترنت خود را بررسی کنید')
+                setError(t('auth.connectionError'))
             } else {
-                setError(err.response.data?.message || 'خطای سرور — لطفاً دوباره تلاش کنید')
+                setError(err.response.data?.message || t('auth.serverError'))
             }
         } finally {
             setLoading(false)
@@ -54,18 +56,18 @@ export default function AuthPage() {
 
     const handleForgot = async () => {
         clearMessages()
-        if (!resetEmail.trim()) { setError('ایمیل را وارد کنید'); return }
+        if (!resetEmail.trim()) { setError(t('auth.emailRequired')); return }
         setLoading(true)
         try {
             await authAPI.forgotPassword(resetEmail.trim())
             // Stay on 'forgot' page and show the info — the user must receive the email
             // before we let them proceed to the reset form.
-            setInfo('در صورت ثبت این ایمیل در سیستم، کد بازیابی برای شما ارسال شد. صندوق ورودی (و پوشه Spam) را بررسی کنید.')
+            setInfo(t('auth.forgotSentInfo'))
         } catch (err) {
             if (!err.response) {
-                setError('اتصال اینترنت خود را بررسی کنید')
+                setError(t('auth.connectionError'))
             } else {
-                setError(err.response.data?.message || 'خطای سرور — لطفاً دوباره تلاش کنید')
+                setError(err.response.data?.message || t('auth.serverError'))
             }
         } finally {
             setLoading(false)
@@ -74,17 +76,17 @@ export default function AuthPage() {
 
     const handleReset = async () => {
         clearMessages()
-        if (!resetForm.token.trim()) { setError('کد بازیابی را وارد کنید'); return }
-        if (!resetForm.newPassword) { setError('رمز عبور جدید را وارد کنید'); return }
-        if (resetForm.newPassword.length < 6) { setError('رمز عبور باید حداقل ۶ کاراکتر باشد'); return }
+        if (!resetForm.token.trim()) { setError(t('auth.resetCodeRequired')); return }
+        if (!resetForm.newPassword) { setError(t('auth.newPasswordRequired')); return }
+        if (resetForm.newPassword.length < 6) { setError(t('auth.passwordMinLength')); return }
         setLoading(true)
         try {
             await authAPI.resetPassword(resetEmail.trim(), resetForm.token.trim(), resetForm.newPassword)
-            setInfo('رمز عبور با موفقیت تغییر یافت. اکنون می‌توانید وارد شوید.')
+            setInfo(t('auth.resetSuccess'))
             setMode('login')
             setForm(f => ({ ...f, email: resetEmail.trim(), password: '' }))
         } catch (err) {
-            setError(err.response?.data?.message || 'کد نامعتبر یا منقضی شده است')
+            setError(err.response?.data?.message || t('auth.invalidOrExpiredCode'))
         } finally {
             setLoading(false)
         }
@@ -104,7 +106,7 @@ export default function AuthPage() {
                             draggable={false}
                         />
                         <h1 className="og-title text-3xl text-og-accent mt-2">TarGame</h1>
-                        <p className="text-sm text-og-muted mt-2">ورود به شبکه گیم و لابی‌های آنلاین</p>
+                        <p className="text-sm text-og-muted mt-2">{t('auth.subtitle')}</p>
                     </div>
 
                     {/* Tab bar — only show for login/register */}
@@ -119,7 +121,7 @@ export default function AuthPage() {
                                         ? 'og-tab-active'
                                         : 'og-tab-inactive hover:text-og-body'
                                     }`}>
-                                    {m === 'login' ? 'ورود' : 'ثبت نام'}
+                                    {m === 'login' ? t('auth.tabLogin') : t('auth.tabRegister')}
                                 </button>
                             ))}
                         </div>
@@ -170,8 +172,8 @@ export default function AuthPage() {
                                 className="og-btn-primary w-full mt-3"
                             >
                                 {loading
-                                    ? (mode === 'login' ? 'در حال ورود...' : 'در حال ثبت نام...')
-                                    : (mode === 'login' ? 'ورود به پنل' : 'ایجاد حساب')}
+                                    ? (mode === 'login' ? t('auth.loggingIn') : t('auth.registering'))
+                                    : (mode === 'login' ? t('auth.loginSubmit') : t('auth.registerSubmit'))}
                             </button>
 
                             {mode === 'login' && (
@@ -179,7 +181,7 @@ export default function AuthPage() {
                                     className="text-center text-[11px] text-og-accent mt-2 cursor-pointer hover:underline select-none"
                                     onClick={() => { clearMessages(); setResetEmail(form.email); setMode('forgot') }}
                                 >
-                                    فراموشی رمز عبور
+                                    {t('auth.forgotPassword')}
                                 </p>
                             )}
                         </form>
@@ -192,7 +194,7 @@ export default function AuthPage() {
                             onSubmit={(e) => { e.preventDefault(); info ? setMode('reset') : handleForgot() }}
                         >
                             <p className="text-sm text-og-muted text-center mb-4">
-                                ایمیل حساب خود را وارد کنید تا کد بازیابی برای شما ارسال شود.
+                                {t('auth.forgotEmailPrompt')}
                             </p>
                             <input
                                 className="og-input ltr"
@@ -213,7 +215,7 @@ export default function AuthPage() {
                                     disabled={loading || !resetEmail.trim()}
                                     className="og-btn-primary w-full mt-3"
                                 >
-                                    {loading ? 'در حال ارسال...' : 'ارسال کد بازیابی'}
+                                    {loading ? t('auth.sending') : t('auth.sendRecoveryCode')}
                                 </button>
                             ) : (
                                 <>
@@ -221,13 +223,13 @@ export default function AuthPage() {
                                         type="submit"
                                         className="og-btn-primary w-full mt-3"
                                     >
-                                        کد را دریافت کردم — ادامه دهید
+                                        {t('auth.receivedCodeContinue')}
                                     </button>
                                     <p
                                         className="text-center text-[11px] text-og-accent mt-1 cursor-pointer hover:underline select-none"
                                         onClick={() => clearMessages()}
                                     >
-                                        ارسال مجدد به ایمیل دیگر
+                                        {t('auth.resendToOtherEmail')}
                                     </p>
                                 </>
                             )}
@@ -235,7 +237,7 @@ export default function AuthPage() {
                                 className="text-center text-[11px] text-og-muted mt-2 cursor-pointer hover:text-og-body select-none"
                                 onClick={goToLogin}
                             >
-                                بازگشت به ورود
+                                {t('auth.backToLogin')}
                             </p>
                         </form>
                     )}
@@ -249,7 +251,7 @@ export default function AuthPage() {
                             {info && <div className="rounded-lg og-card p-3 text-xs text-og-accent mb-1">{info}</div>}
                             <input
                                 className="og-input ltr text-center tracking-widest text-lg"
-                                placeholder="کد ۶ رقمی"
+                                placeholder={t('auth.codePlaceholder')}
                                 maxLength={6}
                                 value={resetForm.token}
                                 onChange={setReset('token')}
@@ -258,7 +260,7 @@ export default function AuthPage() {
                             <input
                                 className="og-input ltr"
                                 type="password"
-                                placeholder="رمز عبور جدید"
+                                placeholder={t('auth.newPasswordPlaceholder')}
                                 autoComplete="new-password"
                                 value={resetForm.newPassword}
                                 onChange={setReset('newPassword')}
@@ -271,13 +273,13 @@ export default function AuthPage() {
                                 disabled={loading || !resetForm.token || !resetForm.newPassword}
                                 className="og-btn-primary w-full mt-3"
                             >
-                                {loading ? 'در حال تغییر...' : 'تغییر رمز عبور'}
+                                {loading ? t('auth.changingPassword') : t('auth.changePassword')}
                             </button>
                             <p
                                 className="text-center text-[11px] text-og-muted mt-2 cursor-pointer hover:text-og-body select-none"
                                 onClick={() => { clearMessages(); setMode('forgot') }}
                             >
-                                ارسال مجدد کد
+                                {t('auth.resendCode')}
                             </p>
                         </form>
                     )}

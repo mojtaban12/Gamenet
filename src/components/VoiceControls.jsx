@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Mic, MicOff, ChevronDown, RefreshCw } from 'lucide-react'
 import { useVoiceStore } from '../store/voiceStore'
 import { useSettingStore, parseHotkey, SETTING_DEFAULTS } from '../store/settingStore'
@@ -10,6 +11,7 @@ function matchesHotkey(e, hk) {
 }
 
 export default function VoiceControls({ groupId, userId }) {
+    const { t } = useTranslation()
     const {
         connected, connecting, micEnabled, speakingIds,
         micMode, pttActive,
@@ -102,10 +104,10 @@ export default function VoiceControls({ groupId, userId }) {
                 disabled={connecting || (connected && isPtt)}
                 onClick={handleMicClick}
                 title={
-                    !connected       ? 'پیوستن به وویس'         :
-                    isPtt && pttHeld ? 'در حال صحبت...'          :
-                    isPtt            ? `نگه دار ${pttHk.label}`  :
-                    micOn            ? 'قطع میکروفون'             : 'روشن کردن میکروفون'
+                    !connected       ? t('voice.join')                          :
+                    isPtt && pttHeld ? t('voice.speaking')                       :
+                    isPtt            ? t('voice.holdKey', { key: pttHk.label })  :
+                    micOn            ? t('voice.muteMic')                        : t('voice.unmuteMic')
                 }
                 className={`relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:cursor-default ${
                     pttHeld
@@ -119,7 +121,7 @@ export default function VoiceControls({ groupId, userId }) {
                     : <Icon icon={micOn ? Mic : MicOff} size="sm" />
                 }
                 {isPtt && connected && (
-                    <span className="absolute -bottom-1 -right-1 font-mono text-[7px] font-bold bg-gn-surface border border-gn-border rounded px-0.5 text-og-muted leading-tight select-none">
+                    <span className="absolute -bottom-1 -end-1 font-mono text-[7px] font-bold bg-gn-surface border border-gn-border rounded px-0.5 text-og-muted leading-tight select-none">
                         {pttHk.label}
                     </span>
                 )}
@@ -130,7 +132,7 @@ export default function VoiceControls({ groupId, userId }) {
                 ref={menuBtnRef}
                 type="button"
                 onClick={openMenu}
-                title="حالت میکروفون"
+                title={t('voice.micModeTitle')}
                 className={`flex items-center justify-center w-5 h-5 rounded transition-colors ${
                     showMenu
                         ? 'bg-og-hover text-og-body'
@@ -146,8 +148,8 @@ export default function VoiceControls({ groupId, userId }) {
                     style={{ top: menuPos.top, left: menuPos.left }}
                     className="fixed z-[9999] bg-gn-surface border border-gn-border rounded-xl shadow-2xl py-1 w-52">
                     {[
-                        { key: 'always-on',    label: 'همیشه روشن',     sub: 'قطع/وصل', hotkey: muteHk.label },
-                        { key: 'push-to-talk', label: 'فشار برای صحبت', sub: 'نگه دار', hotkey: pttHk.label  },
+                        { key: 'always-on',    label: t('voice.alwaysOn'),    sub: t('voice.alwaysOnSub'),    hotkey: muteHk.label },
+                        { key: 'push-to-talk', label: t('voice.pushToTalk'), sub: t('voice.pushToTalkSub'), hotkey: pttHk.label  },
                     ].map(opt => (
                         <button
                             key={opt.key}
@@ -161,7 +163,7 @@ export default function VoiceControls({ groupId, userId }) {
                             </span>
 
                             <div className="flex-1 min-w-0">
-                                <div className="text-og-body text-xs font-medium text-right">{opt.label}</div>
+                                <div className="text-og-body text-xs font-medium text-start">{opt.label}</div>
                                 <div className="flex items-center justify-end gap-1 mt-0.5">
                                     <span className="text-og-muted text-[10px]">{opt.sub}</span>
                                     <kbd className="inline-flex items-center px-1 py-px bg-og-panel border border-og rounded text-[9px] font-mono text-og-muted leading-none">
@@ -182,10 +184,10 @@ export default function VoiceControls({ groupId, userId }) {
                         <span className="w-3.5 h-3.5 flex-shrink-0 flex items-center justify-center text-og-muted">
                             <Icon icon={RefreshCw} size={13} className={connecting ? 'animate-spin' : ''} />
                         </span>
-                        <div className="flex-1 min-w-0 text-right">
-                            <div className="text-og-body text-xs font-medium">اتصال مجدد وویس</div>
+                        <div className="flex-1 min-w-0 text-start">
+                            <div className="text-og-body text-xs font-medium">{t('voice.reconnectVoice')}</div>
                             <div className="text-og-muted text-[10px] mt-0.5">
-                                {connecting ? 'در حال اتصال...' : connected ? 'اگر صدا قطع/خراب شده' : 'اتصال به وویس'}
+                                {connecting ? t('common.connecting') : connected ? t('voice.reconnectHintBroken') : t('voice.reconnectHintDefault')}
                             </div>
                         </div>
                     </button>

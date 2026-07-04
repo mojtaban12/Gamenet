@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronUp, Send, Smile, X } from 'lucide-react'
 import { messageAPI } from '../api'
 import { useMessageStore } from '../store/messageStore'
@@ -9,8 +10,9 @@ import EmojiPicker from './EmojiPicker'
 import ChatTextarea from './ChatTextarea'
 import Icon from './ui/Icon'
 
-// پنجره چت شناور (گوشه پایین چپ) — برای استفاده داخل لابی
+// پنجره چت شناور (گوشه پایین) — برای استفاده داخل لابی
 export default function FloatingChat({ friend, onClose }) {
+    const { t } = useTranslation()
     const [input, setInput]       = useState('')
     const [loading, setLoading]   = useState(true)
     const [loadingOlder, setLoadingOlder] = useState(false)
@@ -91,7 +93,7 @@ export default function FloatingChat({ friend, onClose }) {
     }
 
     return (
-        <div className="fixed bottom-0 left-4 z-40 w-72 bg-gn-surface border border-gn-border rounded-t-xl shadow-2xl flex flex-col"
+        <div className="fixed bottom-0 end-4 z-40 w-72 bg-gn-surface border border-gn-border rounded-t-xl shadow-2xl flex flex-col"
              style={{ boxShadow: '0 -4px 24px rgba(0,0,0,0.4)', maxHeight: minimized ? '44px' : '420px' }}>
 
             <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gn-border cursor-pointer flex-shrink-0"
@@ -102,7 +104,7 @@ export default function FloatingChat({ friend, onClose }) {
                             ? <img src={friend.avatarUrl} className="w-full h-full object-cover" alt="" />
                             : <span className="text-gn-text text-xs font-bold">{friend.username[0].toUpperCase()}</span>}
                     </div>
-                    <span className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-gn-bg
+                    <span className={`absolute -bottom-0.5 -start-0.5 w-2 h-2 rounded-full border border-gn-bg
             ${friend.online ? 'bg-gn-green' : 'bg-gn-muted'}`} />
                 </div>
                 <span className="flex-1 text-gn-text text-sm font-semibold truncate">{friend.username}</span>
@@ -118,7 +120,7 @@ export default function FloatingChat({ friend, onClose }) {
 
             {!minimized && (
                 <>
-                    <div ref={listRef} onScroll={onScroll} className="flex-1 overflow-y-auto p-3 space-y-2" style={{ minHeight: '240px' }}>
+                    <div ref={listRef} onScroll={onScroll} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-3 space-y-2" style={{ minHeight: '240px' }}>
                         {loadingOlder && (
                             <div className="flex justify-center py-1">
                                 <div className="w-4 h-4 border-2 border-gn-accent/30 border-t-gn-accent rounded-full animate-spin" />
@@ -130,7 +132,7 @@ export default function FloatingChat({ friend, onClose }) {
                             </div>
                         ) : messages.length === 0 ? (
                             <div className="flex items-center justify-center h-full text-gn-muted text-xs opacity-50">
-                                شروع گفتگو
+                                {t('friendChat.startConversationWith', { username: friend.username })}
                             </div>
                         ) : messages.map((msg, i) => {
                             const isMine = msg.senderId === myId
@@ -144,8 +146,8 @@ export default function FloatingChat({ friend, onClose }) {
                                             </span>
                                         </div>
                                     )}
-                                    <div className={`flex ${isMine ? 'justify-start' : 'justify-end'}`}>
-                                        <div className={`max-w-[80%] px-2.5 py-1.5 rounded-lg text-xs selectable whitespace-pre-wrap break-words ${
+                                    <div className={`flex min-w-0 w-full ${isMine ? 'justify-start' : 'justify-end'}`}>
+                                        <div dir="auto" className={`min-w-0 max-w-[80%] px-2.5 py-1.5 rounded-lg text-xs selectable whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${
                                             isMine
                                                 ? 'bg-gn-accent/20 border border-gn-accent/30 text-gn-text'
                                                 : 'bg-gn-panel border border-gn-border text-gn-text'
@@ -169,7 +171,7 @@ export default function FloatingChat({ friend, onClose }) {
                         <div className="flex gap-1.5 items-end">
                             <ChatTextarea
                                 className="gn-input flex-1 py-2 text-xs"
-                                placeholder="پیام..."
+                                placeholder={t('friendChat.placeholder')}
                                 value={input}
                                 onChange={setInput}
                                 onSend={send}

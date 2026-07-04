@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { MessageCircle, Search, UserPlus, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { ChevronDown, ChevronUp, MessageCircle, Search, UserPlus, X } from 'lucide-react'
 import { friendAPI } from '../api'
 import { usePresenceStore } from '../store/presenceStore'
 import { useMessageStore } from '../store/messageStore'
@@ -7,6 +8,7 @@ import { useNotificationStore } from '../store/notificationStore'
 import Icon from './ui/Icon'
 
 export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
+    const { t } = useTranslation()
     const [showAdd, setShowAdd]       = useState(false)
     const [showOffline, setShowOffline] = useState(false)
     const [searchQ, setSearchQ]       = useState('')
@@ -27,9 +29,9 @@ export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
         setInviting(friend.friendId)
         try {
             await friendAPI.invite(friend.friendId, groupId, groupName)
-            toast(`دعوت به ${friend.username} ارسال شد`, 'success')
+            toast(t('lobbyFriends.inviteSent', { username: friend.username }), 'success')
         } catch (e) {
-            toast(e.response?.data?.message || 'خطا در دعوت', 'error')
+            toast(e.response?.data?.message || t('lobbyFriends.inviteError'), 'error')
         } finally {
             setInviting(null)
         }
@@ -46,9 +48,9 @@ export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
         setSending(username)
         try {
             await friendAPI.sendRequest(username)
-            toast('درخواست دوستی ارسال شد', 'success')
+            toast(t('lobbyFriends.requestSent'), 'success')
         } catch (e) {
-            toast(e.response?.data?.message || 'خطا', 'error')
+            toast(e.response?.data?.message || t('common.error'), 'error')
         } finally {
             setSending(null)
         }
@@ -70,9 +72,9 @@ export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
         <div className="flex flex-col shrink-0 bg-og-subtle/30">
             <div className="flex items-center justify-between gap-2 px-3 py-2 flex-shrink-0">
                 <p className="og-label text-og-muted truncate">
-                    دعوت دوستان
+                    {t('lobbyFriends.invite')}
                     {hasOnline && (
-                        <span className="text-og-body font-normal mr-1">· {onlineFriends.length} آنلاین</span>
+                        <span className="text-og-body font-normal ms-1">{t('lobbyFriends.onlineCount', { count: onlineFriends.length })}</span>
                     )}
                 </p>
                 <button
@@ -86,12 +88,12 @@ export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
                     {showAdd ? (
                         <>
                             <Icon icon={X} size={12} />
-                            بستن
+                            {t('lobbyFriends.close')}
                         </>
                     ) : (
                         <>
                             <Icon icon={Search} size={12} />
-                            افزودن
+                            {t('lobbyFriends.add')}
                         </>
                     )}
                 </button>
@@ -102,14 +104,14 @@ export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
                     <div className="flex gap-2">
                         <input
                             className="og-input flex-1 py-1.5 text-xs no-drag"
-                            placeholder="نام کاربری برای جستجو..."
+                            placeholder={t('lobbyFriends.usernameSearchPlaceholder')}
                             value={searchQ}
                             onChange={e => setSearchQ(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleSearch()}
                             autoFocus
                         />
                         <button type="button" onClick={handleSearch} className="og-btn-primary px-3 py-1.5 text-xs shrink-0">
-                            جستجو
+                            {t('lobbyFriends.search')}
                         </button>
                     </div>
                     {searchRes.length > 0 && (
@@ -127,7 +129,7 @@ export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
                                         onClick={() => handleAddFriend(u.username)}
                                         disabled={sending === u.username}
                                         className="og-btn-ghost px-2 py-1 text-[11px] shrink-0 disabled:opacity-40">
-                                        {sending === u.username ? '...' : 'درخواست'}
+                                        {sending === u.username ? '...' : t('lobbyFriends.request')}
                                     </button>
                                 </div>
                             ))}
@@ -138,13 +140,13 @@ export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
 
             {!showAdd && !hasFriends && (
                 <p className="px-3 pb-3 text-og-muted text-[11px] leading-relaxed">
-                    دوستی ندارید — با «افزودن» جستجو کنید و دعوت کنید.
+                    {t('lobbyFriends.noFriendsHint')}
                 </p>
             )}
 
             {!showAdd && hasFriends && !hasOnline && (
                 <p className="px-3 pb-1 text-og-muted text-[11px]">
-                    کسی آنلاین نیست
+                    {t('lobbyFriends.noOneOnline')}
                     {hasOffline && (
                         <>
                             {' · '}
@@ -152,7 +154,7 @@ export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
                                 type="button"
                                 onClick={() => setShowOffline(s => !s)}
                                 className="text-og-accent hover:underline">
-                                {showOffline ? 'پنهان' : `${offlineFriends.length} نفر آفلاین`}
+                                {showOffline ? t('lobbyFriends.hide') : t('lobbyFriends.offlineCount', { count: offlineFriends.length })}
                             </button>
                         </>
                     )}
@@ -180,8 +182,9 @@ export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
                     <button
                         type="button"
                         onClick={() => setShowOffline(s => !s)}
-                        className="text-[10px] text-og-muted hover:text-og-body transition-colors">
-                        {showOffline ? '▾ پنهان آفلاین‌ها' : `▸ ${offlineFriends.length} نفر آفلاین`}
+                        className="flex items-center gap-1 text-[10px] text-og-muted hover:text-og-body transition-colors">
+                        <Icon icon={showOffline ? ChevronUp : ChevronDown} size={10} />
+                        {showOffline ? t('lobbyFriends.hideOfflineList') : t('lobbyFriends.offlineCount', { count: offlineFriends.length })}
                     </button>
                 </div>
             )}
@@ -204,6 +207,7 @@ export default function LobbyFriendsPanel({ groupId, groupName, onOpenChat }) {
 }
 
 function FriendRow({ friend, unread, inviting, onInvite, onChat, canInvite, dimmed }) {
+    const { t } = useTranslation()
     return (
         <div
             className={`flex items-center gap-2 py-1.5 px-1 rounded-lg transition-colors group ${
@@ -216,7 +220,7 @@ function FriendRow({ friend, unread, inviting, onInvite, onChat, canInvite, dimm
                         : friend.username[0].toUpperCase()}
                 </div>
                 {canInvite && (
-                    <span className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-gn-green border-2 border-[var(--og-surface)]" />
+                    <span className="absolute -bottom-0.5 -end-0.5 w-2 h-2 rounded-full bg-gn-green border-2 border-[var(--og-surface)]" />
                 )}
             </div>
             <span className="flex-1 text-og-body text-xs truncate">{friend.username}</span>
@@ -232,7 +236,7 @@ function FriendRow({ friend, unread, inviting, onInvite, onChat, canInvite, dimm
                     type="button"
                     onClick={onInvite}
                     disabled={inviting}
-                    title="دعوت به لابی"
+                    title={t('lobbyFriends.inviteToLobby')}
                     className="w-7 h-7 flex items-center justify-center rounded-lg text-og-accent bg-og-primary-dim/40 hover:bg-og-primary-dim transition-colors shrink-0 disabled:opacity-40">
                     <Icon icon={UserPlus} size="sm" />
                 </button>
@@ -241,7 +245,7 @@ function FriendRow({ friend, unread, inviting, onInvite, onChat, canInvite, dimm
             <button
                 type="button"
                 onClick={onChat}
-                title="پیام"
+                title={t('lobbyFriends.message')}
                 className="w-7 h-7 flex items-center justify-center rounded-lg text-og-muted hover:text-og-accent hover:bg-og-primary-dim transition-colors shrink-0">
                 <Icon icon={MessageCircle} size="xs" />
             </button>

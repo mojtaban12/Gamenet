@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
+import i18n from '../i18n'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
@@ -35,7 +36,7 @@ api.interceptors.response.use(
             // No HTTP response = user's network is down or the request timed out.
             // Blame the connection, not the service.
             useNotificationStore.getState().toast(
-                'اتصال اینترنت شما قطع یا ناپایدار است — لطفاً اتصال خود را بررسی کنید',
+                i18n.t('common.internetUnstable'),
                 'error',
                 7000
             )

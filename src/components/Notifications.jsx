@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { ArrowUpCircle, CheckCircle2, Info, Swords, X, XCircle } from 'lucide-react'
 import { useNotificationStore } from '../store/notificationStore'
 import { useUpdateStore } from '../store/updateStore'
@@ -12,7 +13,7 @@ export default function Notifications() {
     const { notifications, remove } = useNotificationStore()
 
     return (
-        <div className="fixed top-12 left-4 z-50 flex flex-col gap-2 w-80">
+        <div className="fixed top-12 start-4 z-50 flex flex-col gap-2 w-80">
             {notifications.map(n => (
                 <NotificationItem key={n.id} notif={n} onRemove={() => remove(n.id)} />
             ))}
@@ -21,6 +22,7 @@ export default function Notifications() {
 }
 
 function NotificationItem({ notif, onRemove }) {
+    const { t } = useTranslation()
     const navigate = useNavigate()
     const networkReady = useSetupStore(s => s.phase === PHASE.DONE)
 
@@ -58,7 +60,7 @@ function NotificationItem({ notif, onRemove }) {
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="text-gn-text text-xs font-semibold">{notif.username}</div>
-                        <div className="text-gn-muted text-xs">دعوت به لابی</div>
+                        <div className="text-gn-muted text-xs">{t('notifications.inviteToLobby')}</div>
                     </div>
                     <button onClick={onRemove} className="text-gn-muted hover:text-gn-text flex items-center justify-center w-5 h-5 flex-shrink-0">
                         <Icon icon={X} size="xs" />
@@ -79,14 +81,14 @@ function NotificationItem({ notif, onRemove }) {
                             onRemove()
                         }}
                         disabled={!networkReady}
-                        title={!networkReady ? 'در حال اتصال به شبکه...' : ''}
+                        title={!networkReady ? t('notifications.connectingToNetwork') : ''}
                         className="flex-1 py-1.5 text-xs bg-gn-accent text-gn-bg rounded transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
-                        {networkReady ? 'پیوستن' : 'در حال اتصال...'}
+                        {networkReady ? t('notifications.join') : t('common.connecting')}
                     </button>
                     <button
                         onClick={onRemove}
                         className="flex-1 py-1.5 text-xs border border-gn-border text-gn-muted hover:text-gn-text rounded transition-colors">
-                        رد کردن
+                        {t('notifications.dismiss')}
                     </button>
                 </div>
             </div>
@@ -102,8 +104,8 @@ function NotificationItem({ notif, onRemove }) {
                         <Icon icon={ArrowUpCircle} size="sm" className="text-gn-accent" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="text-gn-text text-xs font-semibold">آپدیت جدید موجود است</div>
-                        <div className="text-gn-muted text-xs">نسخه v{notif.latestVersion}</div>
+                        <div className="text-gn-text text-xs font-semibold">{t('notifications.newUpdateAvailable')}</div>
+                        <div className="text-gn-muted text-xs">{t('notifications.versionLabel', { version: notif.latestVersion })}</div>
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -114,7 +116,7 @@ function NotificationItem({ notif, onRemove }) {
                             onRemove()
                         }}
                         className="flex-1 py-1.5 text-xs bg-gn-accent text-gn-bg rounded hover:opacity-90 transition-opacity font-medium">
-                        الان آپدیت میکنم
+                        {t('notifications.updateNow')}
                     </button>
                     <button
                         onClick={() => {
@@ -122,7 +124,7 @@ function NotificationItem({ notif, onRemove }) {
                             onRemove()
                         }}
                         className="flex-1 py-1.5 text-xs border border-gn-border text-gn-muted hover:text-gn-text rounded transition-colors">
-                        بعدا آپدیت میکنم
+                        {t('notifications.updateLater')}
                     </button>
                 </div>
             </div>
@@ -138,7 +140,7 @@ function NotificationItem({ notif, onRemove }) {
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="text-gn-text text-xs font-semibold">{notif.username}</div>
-                        <div className="text-gn-muted text-xs">درخواست دوستی</div>
+                        <div className="text-gn-muted text-xs">{t('notifications.friendRequestLabel')}</div>
                     </div>
                     <button onClick={onRemove} className="text-gn-muted hover:text-gn-text flex items-center justify-center w-5 h-5 flex-shrink-0">
                         <Icon icon={X} size="xs" />
@@ -157,7 +159,7 @@ function NotificationItem({ notif, onRemove }) {
                             onRemove()
                         }}
                         className="flex-1 py-1.5 text-xs bg-gn-accent2/80 text-white rounded hover:opacity-90 transition-opacity">
-                        قبول
+                        {t('notifications.accept')}
                     </button>
                     <button
                         onClick={async () => {
@@ -165,7 +167,7 @@ function NotificationItem({ notif, onRemove }) {
                             onRemove()
                         }}
                         className="flex-1 py-1.5 text-xs border border-gn-border text-gn-muted hover:text-gn-text rounded transition-colors">
-                        رد
+                        {t('notifications.reject')}
                     </button>
                 </div>
             </div>

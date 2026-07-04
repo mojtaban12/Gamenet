@@ -1,8 +1,10 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DownloadCloud, ArrowUpCircle, RotateCw } from 'lucide-react'
 import { useUpdateStore } from '../store/updateStore'
 
 export default function UpdateBar() {
+    const { t } = useTranslation()
     const { phase, progress } = useUpdateStore()
 
     useEffect(() => {
@@ -23,9 +25,9 @@ export default function UpdateBar() {
                 <div className="flex items-center gap-2">
                     <ArrowUpCircle size={13} className="shrink-0" style={{ color: 'var(--og-primary)' }} />
                     <div className="text-xs font-semibold" style={{ color: 'var(--og-primary)' }}>
-                        بررسی آپدیت جدید
+                        {t('updateBar.checking')}
                     </div>
-                    <div className="mr-auto w-3 h-3 rounded-full border-2 border-transparent animate-spin"
+                    <div className="ms-auto w-3 h-3 rounded-full border-2 border-transparent animate-spin"
                          style={{ borderTopColor: 'var(--og-primary)', borderRightColor: 'rgba(0,218,243,0.3)' }} />
                 </div>
             </div>
@@ -42,9 +44,9 @@ export default function UpdateBar() {
                 <div className="flex items-center gap-2 mb-2">
                     <DownloadCloud size={13} className="shrink-0 animate-pulse" style={{ color: 'var(--og-primary)' }} />
                     <span className="text-xs font-semibold" style={{ color: 'var(--og-primary)' }}>
-                        دانلود آپدیت اجباری
+                        {t('updateBar.downloading')}
                     </span>
-                    <span className="text-[10px] mr-auto" style={{ color: 'var(--og-muted)' }}>
+                    <span className="text-[10px] ms-auto" style={{ color: 'var(--og-muted)' }}>
                         {pct}%
                     </span>
                 </div>
@@ -72,7 +74,7 @@ export default function UpdateBar() {
                 <div className="flex items-center gap-2">
                     <RotateCw size={13} className="shrink-0 animate-spin" style={{ color: 'var(--og-primary)' }} />
                     <div className="text-xs font-semibold" style={{ color: 'var(--og-primary)' }}>
-                        در حال نصب آپدیت...
+                        {t('updateBar.installing')}
                     </div>
                 </div>
             </div>
