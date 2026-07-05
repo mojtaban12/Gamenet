@@ -5,6 +5,7 @@ export const SETTING_DEFAULTS = {
     'hotkey.voice.mute':     'Ctrl+U',
     'hotkey.voice.ptt':      'U',
     'hotkey.overlay.toggle': 'Ctrl+`',
+    'hotkey.tinc.reset':     'Ctrl+1',
 }
 
 export const ADMIN_DEFAULTS = {
@@ -139,5 +140,6 @@ export const useSettingStore = create((set, get) => ({
         if (!el?.shortcut?.set) return
         el.shortcut.set('voiceMuteToggle', toElectronAccel(s['hotkey.voice.mute']     ?? SETTING_DEFAULTS['hotkey.voice.mute']))
         el.shortcut.set('toggleOverlay',   toElectronAccel(s['hotkey.overlay.toggle'] ?? SETTING_DEFAULTS['hotkey.overlay.toggle']))
+        el.shortcut.set('tincReset',       toElectronAccel(s['hotkey.tinc.reset']     ?? SETTING_DEFAULTS['hotkey.tinc.reset']))
     },
 }))

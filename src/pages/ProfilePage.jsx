@@ -352,6 +352,7 @@ const HOTKEY_ROWS_KEYS = [
     { key: 'hotkey.voice.mute',     labelKey: 'profile.hotkeyMicMute',     hintKey: 'profile.hotkeyMicMuteHint' },
     { key: 'hotkey.voice.ptt',      labelKey: 'profile.hotkeyPtt',         hintKey: 'profile.hotkeyPttHint' },
     { key: 'hotkey.overlay.toggle', labelKey: 'profile.hotkeyOverlayToggle', hintKey: 'profile.hotkeyOverlayToggleHint' },
+    { key: 'hotkey.tinc.reset',     labelKey: 'profile.hotkeyTincReset',     hintKey: 'profile.hotkeyTincResetHint' },
 ]
 
 function HotkeySettings({ settings, onUpdate, toast }) {

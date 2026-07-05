@@ -306,6 +306,14 @@ function setupIpcHandlers(ipcMain, mainWindow, callbacks = {}) {
         return await tinc.getStatus()
     })
 
+    ipcMain.handle('tinc:hard-reset', async () => {
+        try {
+            return { success: true, ...(await tinc.hardReset()) }
+        } catch (err) {
+            return { success: false, error: err.message, running: false, restarted: false }
+        }
+    })
+
     // ─────────────── GAMES ───────────────────────────────────────────
     // gameInfo از سرور میاد: { name, exeName, registryKey, registryValue }
 

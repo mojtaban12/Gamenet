@@ -131,7 +131,16 @@
     "hotkeyPttHint": "نگه داشتن کلید",
     "hotkeyOverlayToggle": "باز/بستن اورلی",
     "hotkeyOverlayToggleHint": "کلید جهانی در بازی",
+    "hotkeyTincReset": "بازنشانی شبکه بازی",
+    "hotkeyTincResetHint": "ری‌استارت سرویس P2P",
     "recording": "ضبط..."
+  },
+  "tinc": {
+    "resetOk": "شبکه بازی بازنشانی شد",
+    "resetOkMesh": "شبکه بازی بازنشانی و پیکربندی به‌روز شد",
+    "resetOkNoMesh": "سرویس بازنشانی شد",
+    "resetFailed": "بازنشانی شبکه ناموفق بود",
+    "resetNotRunning": "سرویس P2P بعد از بازنشانی بالا نیامد"
   },
   "friends": {
     "tabFriends": "دوستان ({{count}})",
@@ -223,7 +232,9 @@
     "userJoined": "{{username}} وارد لابی شد",
     "userLeft": "{{username}} از لابی خارج شد",
     "hostChanged": "{{username}} میزبان لابی شد",
-    "newUserFallback": "کاربر جدید"
+    "newUserFallback": "کاربر جدید",
+    "reconnectFailed": "اتصال چت برقرار نشد — اینترنت را بررسی کنید",
+    "reconnectHint": "چت قطع است — برای اتصال مجدد کلیک کنید"
   },
   "gamePanel": {
     "label": "بازی",
@@ -240,6 +251,8 @@
     "launchError": "خطا در اجرای بازی",
     "netbirdNotConnected": "شبکه NetBird متصل نیست",
     "prepareError": "خطا در آماده‌سازی",
+    "waitingMesh": "در انتظار شبکه بازی...",
+    "meshNotReady": "شبکه بازی هنوز آماده نیست — چند ثانیه صبر کنید یا کلید بازنشانی را بزنید",
     "selectGameFirst": "ابتدا یک بازی انتخاب کنید",
     "prepareGameError": "خطا در آماده‌سازی بازی"
   },

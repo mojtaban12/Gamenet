@@ -66,7 +66,13 @@ contextBridge.exposeInMainWorld('electron', {
         applyConfig: (zipB64)   => ipcRenderer.invoke('tinc:apply-config', zipB64),
         updateConfig:(zipB64)   => ipcRenderer.invoke('tinc:update-config', zipB64),
         stop:        ()         => ipcRenderer.invoke('tinc:stop'),
+        hardReset:   ()         => ipcRenderer.invoke('tinc:hard-reset'),
         status:      ()         => ipcRenderer.invoke('tinc:status'),
+        onHardResetDone: (cb) => {
+            const listener = (_, result) => cb(result)
+            ipcRenderer.on('tinc:hard-reset-done', listener)
+            return () => ipcRenderer.removeListener('tinc:hard-reset-done', listener)
+        },
     },
 
     games: {

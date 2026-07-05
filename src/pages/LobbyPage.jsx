@@ -14,9 +14,9 @@ import {
     useLobbyStore,
     enterLobby,
     leaveLobby,
+    reconnectLobby,
     sendLobbyMessage,
     getLobbyHub,
-    getMeshState,
 } from '../store/lobbyStore'
 import { useLocaleStore, getDir } from '../store/localeStore'
 import EmojiPicker from '../components/EmojiPicker'
@@ -58,6 +58,7 @@ export default function LobbyPage() {
     const [showEmoji, setShowEmoji]   = useState(false)
     const [chatFriend, setChatFriend] = useState(null)
     const [copied, setCopied]         = useState(false)
+    const [reconnecting, setReconnecting] = useState(false)
     const [gameStateInfo, setGameStateInfo] = useState({ game: null, playing: false })
     const { toast }                   = useNotificationStore()
     const { friends }                 = usePresenceStore()
@@ -74,7 +75,6 @@ export default function LobbyPage() {
     const friendsChatEnabled = adminSettings['friends.chat.enabled'] !== 'false'
     const messagesEndRef            = useRef(null)
     const messagesContainerRef      = useRef(null)
-    const meshState                 = useRef(getMeshState()).current
     const typingThrottle            = useRef(null)
     const { typingUsers }           = useLobbyStore()
 
@@ -183,6 +183,14 @@ export default function LobbyPage() {
     }, [])
     // ─────────────────────────────────────────────────────────────────
 
+    async function handleReconnect() {
+        if (reconnecting) return
+        setReconnecting(true)
+        const ok = await reconnectLobby()
+        setReconnecting(false)
+        if (!ok) toast(t('lobby.reconnectFailed'), 'error')
+    }
+
     async function handleLeave() {
         await leaveLobby()
         navigate('/rooms')
@@ -209,6 +217,7 @@ export default function LobbyPage() {
     async function sendMessage() {
         const sent = await sendLobbyMessage(groupId, input)
         if (sent) setInput('')
+        else if (!useLobbyStore.getState().connected) toast(t('lobby.reconnectHint'), 'error')
     }
 
     function isMe(m) {
@@ -293,7 +302,20 @@ export default function LobbyPage() {
                                         <span className="text-og-muted text-[11px]">{connected ? t('lobby.connectedStatus') : t('lobby.disconnectedStatus')}</span>
                                     </div>
                                 </div>
-                                <button
+                                <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={handleReconnect}
+                                        disabled={reconnecting}
+                                        title={!connected ? t('lobby.reconnectHint') : t('lobbyList.refresh')}
+                                        className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-50 ${
+                                            !connected
+                                                ? 'text-og-accent bg-og-subtle hover:bg-og-hover'
+                                                : 'text-og-muted hover:text-og-accent hover:bg-og-hover'
+                                        }`}>
+                                        {reconnecting ? '...' : t('lobbyList.refresh')}
+                                    </button>
+                                    <button
                                     type="button"
                                     onClick={() => {
                                         navigator.clipboard.writeText(groupId)
@@ -308,7 +330,8 @@ export default function LobbyPage() {
                                     }`}>
                                     {copied ? <Icon icon={Check} size={12} /> : <Icon icon={Copy} size={12} />}
                                     {copied ? t('common.copied') : t('lobby.copyInvite')}
-                                </button>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -317,10 +340,6 @@ export default function LobbyPage() {
                                 lobbyId={groupId}
                                 isHost={isHost}
                                 hub={getLobbyHub()}
-                                onMeshActive={(version) => {
-                                    meshState.setMeshActive(true)
-                                    if (version) meshState.setAppliedVersion(version)
-                                }}
                                 onGameStateChange={(game, playing) => setGameStateInfo({ game, playing })}
                             />
                         )}
@@ -337,6 +356,11 @@ export default function LobbyPage() {
                         <div
                             ref={messagesContainerRef}
                             className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 space-y-3">
+                            {!connected && (
+                                <div className="rounded-lg border border-og px-3 py-2 text-xs text-og-accent bg-og-subtle">
+                                    {t('lobby.reconnectHint')}
+                                </div>
+                            )}
                             {messages.length === 0 && (
                                 <div className="text-center py-12 text-og-muted text-sm opacity-60">
                                     {t('lobby.chatEmpty')}
@@ -415,11 +439,14 @@ export default function LobbyPage() {
 function MemberRow({ member, isMe, isCurrentUserHost, isFriend, speaking, muted, gameInfo, onToggleMute, onKick, onTransferHost, onAddFriend }) {
     const { t } = useTranslation()
     const m = member
+    const { ip: myIp, tincIp: myTincIp } = useNetbirdStore()
     const [showActions, setShowActions] = useState(false)
     const [adding, setAdding] = useState(false)
     const { channels, memberships } = useVoiceStore()
 
-    const displayIp = gameInfo?.game?.gameType === 2 ? m.ip : m.tincIp
+    const displayIp = gameInfo?.game?.gameType === 2
+        ? (m.ip || (isMe ? myIp : null))
+        : (m.tincIp || (isMe ? myTincIp : null))
 
     const memberChannelId = memberships[m.userId]
     const memberChannel   = memberChannelId && memberChannelId !== 'lobby'

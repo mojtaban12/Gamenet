@@ -6,7 +6,7 @@ if (process.platform === 'win32') {
     app.setAppUserModelId('com.targame.app')
 }
 const { execFileSync } = require('child_process')
-const { setupIpcHandlers, performAppCleanup, isCleanupDone } = require('./ipc')
+const { setupIpcHandlers, performAppCleanup, isCleanupDone, getTincInstance } = require('./ipc')
 const { NetbirdCLI } = require('./netbird')
 const { AppUpdater, applyPendingUpdates } = require('./updater')
 const Store = require('./store')
@@ -76,6 +76,7 @@ let overlayWin = null
 let tray = null
 let overlayShortcut = null   // شورت‌کاتِ فعلیِ ثبت‌شده
 let voiceShortcut = null     // شورت‌کات قطع/وصل میک
+let tincResetShortcut = null
 let overlayPanelVisible = false
 
 // ── Single Instance Lock ───────────────────────────────────────────────
@@ -181,6 +182,7 @@ function createWindow() {
 const DEFAULT_SHORTCUTS = {
     toggleOverlay:    'Control+`',
     voiceMuteToggle:  'Control+U',
+    tincReset:        'Control+1',
 }
 
 function getShortcut(name) {
@@ -313,6 +315,31 @@ function registerVoiceShortcut() {
     }
 }
 
+function registerTincResetShortcut() {
+    if (tincResetShortcut) {
+        try { globalShortcut.unregister(tincResetShortcut) } catch {}
+        tincResetShortcut = null
+    }
+    const accel = getShortcut('tincReset')
+    try {
+        const ok = globalShortcut.register(accel, async () => {
+            try {
+                const tinc = getTincInstance()
+                const result = await tinc.hardReset()
+                mainWindow?.webContents.send('tinc:hard-reset-done', result)
+            } catch (e) {
+                mainWindow?.webContents.send('tinc:hard-reset-done', {
+                    success: false, error: e.message, running: false, restarted: false,
+                })
+            }
+        })
+        if (ok) tincResetShortcut = accel
+        else console.log('[shortcut] tinc reset register returned false for', accel)
+    } catch (e) {
+        console.log('[shortcut] tinc reset register failed:', e.message)
+    }
+}
+
 // ──────────────────────────── TRAY ───────────────────────────────────
 
 function createTray() {
@@ -381,12 +408,14 @@ app.whenReady().then(async () => {
     })
     registerOverlayShortcut()
     registerVoiceShortcut()
+    registerTincResetShortcut()
 
     // IPC: تنظیم/خواندن شورت‌کات
     ipcMain.handle('shortcut:set', (_, name, accelerator) => {
         store.set(`settings.shortcuts.${name}`, accelerator)
         registerOverlayShortcut()
         registerVoiceShortcut()
+        registerTincResetShortcut()
         return true
     })
     ipcMain.handle('shortcut:get', (_, name) => getShortcut(name))

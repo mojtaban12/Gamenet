@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown, Gamepad2, Download } from 'lucide-react'
 import { useNetbirdStore } from '../store/netbirdStore'
 import { useNotificationStore } from '../store/notificationStore'
-import { bringUpMesh } from '../utils/meshNetwork'
+import { waitForLobbyMesh } from '../store/lobbyStore'
 
 const USES_TINC = (gameType) => (gameType ?? 0) !== 2
 import { gameAPI, tincAPI } from '../api'
@@ -13,7 +13,7 @@ import { prefetchGameMeta } from '../utils/gameMetaCache'
 import Icon from './ui/Icon'
 import { useSettingStore } from '../store/settingStore'
 
-export default function GamePanel({ lobbyId, isHost, hub, onMeshActive, onGameStateChange }) {
+export default function GamePanel({ lobbyId, isHost, hub, onGameStateChange }) {
     const { t } = useTranslation()
     const streamEnabled = useSettingStore(s => s.adminSettings['stream.enabled']) !== 'false'
     const [games, setGames]               = useState([])
@@ -27,7 +27,7 @@ export default function GamePanel({ lobbyId, isHost, hub, onMeshActive, onGameSt
     // API-locked game info, used to resolve full game when games list loads
     const [apiLockedId, setApiLockedId]   = useState(null)
     const [apiLockedName, setApiLockedName] = useState('')
-    const { ip: myIp, setTincIp }          = useNetbirdStore()
+    const { ip: myIp }                     = useNetbirdStore()
     const { toast }                       = useNotificationStore()
 
     const statePollerRef   = useRef(null)
@@ -240,13 +240,17 @@ export default function GamePanel({ lobbyId, isHost, hub, onMeshActive, onGameSt
 
     async function prepareAndLaunch(game) {
         if (!myIp) { toast(t('gamePanel.netbirdNotConnected'), 'error'); return }
-        setPhase('preparing')
-        try {
-            if (USES_TINC(game.gameType)) {
-                const { version, tincIp } = await bringUpMesh(lobbyId, myIp, (s, msg) => setPrepMsg(msg))
-                onMeshActive?.(version)
-                setTincIp(tincIp)
+        if (USES_TINC(game.gameType)) {
+            setPhase('preparing')
+            setPrepMsg(t('gamePanel.waitingMesh'))
+            const ready = await waitForLobbyMesh(20000)
+            if (!ready) {
+                toast(t('gamePanel.meshNotReady'), 'error', 6000)
+                setPhase('idle')
+                return
             }
+        }
+        try {
             await launchGame(game)
         } catch (e) {
             toast(e.message || t('gamePanel.prepareError'), 'error', 6000)
@@ -258,15 +262,19 @@ export default function GamePanel({ lobbyId, isHost, hub, onMeshActive, onGameSt
         if (!selectedGame) { toast(t('gamePanel.selectGameFirst'), 'error'); return }
         if (!myIp) { toast(t('gamePanel.netbirdNotConnected'), 'error'); return }
 
-        setPhase('preparing')
-        try {
-            // Ensure game lock is persisted so late joiners can read it
-            await tincAPI.lockGame(lobbyId, selectedGame.id, selectedGame.name).catch(() => {})
-            if (USES_TINC(selectedGame.gameType)) {
-                const { version, tincIp } = await bringUpMesh(lobbyId, myIp, (s, msg) => setPrepMsg(msg))
-                onMeshActive?.(version)
-                setTincIp(tincIp)
+        if (USES_TINC(selectedGame.gameType)) {
+            setPhase('preparing')
+            setPrepMsg(t('gamePanel.waitingMesh'))
+            const ready = await waitForLobbyMesh(20000)
+            if (!ready) {
+                toast(t('gamePanel.meshNotReady'), 'error', 6000)
+                setPhase('idle')
+                return
             }
+        }
+
+        try {
+            await tincAPI.lockGame(lobbyId, selectedGame.id, selectedGame.name).catch(() => {})
             const ok = await launchGame(selectedGame)
             if (ok && hub) {
                 await hub.invoke('StartGame', lobbyId, selectedGame.id, selectedGame.name)

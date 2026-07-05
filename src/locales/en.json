@@ -131,7 +131,16 @@
     "hotkeyPttHint": "Hold the key",
     "hotkeyOverlayToggle": "Toggle overlay",
     "hotkeyOverlayToggleHint": "Global key while in-game",
+    "hotkeyTincReset": "Reset game network",
+    "hotkeyTincResetHint": "restart the P2P service",
     "recording": "Recording..."
+  },
+  "tinc": {
+    "resetOk": "Game network reset",
+    "resetOkMesh": "Network reset and mesh config refreshed",
+    "resetOkNoMesh": "Service reset complete",
+    "resetFailed": "Network reset failed",
+    "resetNotRunning": "P2P service did not start after reset"
   },
   "friends": {
     "tabFriends": "Friends ({{count}})",
@@ -223,7 +232,9 @@
     "userJoined": "{{username}} joined the lobby",
     "userLeft": "{{username}} left the lobby",
     "hostChanged": "{{username}} became the host",
-    "newUserFallback": "New user"
+    "newUserFallback": "New user",
+    "reconnectFailed": "Could not reconnect chat — check your internet",
+    "reconnectHint": "Chat disconnected — click to reconnect"
   },
   "gamePanel": {
     "label": "Game",
@@ -240,6 +251,8 @@
     "launchError": "Error launching game",
     "netbirdNotConnected": "NetBird network is not connected",
     "prepareError": "Error while preparing",
+    "waitingMesh": "Waiting for game network...",
+    "meshNotReady": "Game network not ready yet — wait a few seconds or press the reset hotkey",
     "selectGameFirst": "Please select a game first",
     "prepareGameError": "Error preparing the game"
   },

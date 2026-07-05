@@ -1,6 +1,6 @@
 {
   "name": "targame-app",
-  "version": "1.0.73",
+  "version": "1.0.75",
   "description": "TarGame - Online Gaming Platform",
   "author": "Tar Team",
   "main": "electron/main.js",

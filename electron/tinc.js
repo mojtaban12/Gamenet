@@ -265,7 +265,7 @@ class TincCLI {
     // همیشه آخرِ این لیست نصب می‌شه، همیشه آخرین انتخاب باقی می‌مونه. جابه‌جا
     // کردنش به اول لیست، بعد rebind با disable/enable، هر بار قطعی‌تر جواب
     // می‌ده تا صرفاً reset بدون reorder.
-    async _resetAdapter() {
+    async _reorderBindRegistry() {
         const ps = `
 $name = '${ADAPTER_NAME}'
 $adapter = Get-NetAdapter -Name $name -ErrorAction SilentlyContinue
@@ -280,51 +280,114 @@ if ($adapter) {
         $bindList.Insert(0, $device)
         Set-ItemProperty -Path $regPath -Name Bind -Value $bindList.ToArray() -Type MultiString
     } catch {}
-}
-Disable-NetAdapter -Name $name -Confirm:$false -ErrorAction SilentlyContinue
-Start-Sleep -Milliseconds 800
-Enable-NetAdapter -Name $name -Confirm:$false -ErrorAction SilentlyContinue
-for ($i = 0; $i -lt 10; $i++) {
-    Start-Sleep -Milliseconds 500
-    $a = Get-NetAdapter -Name $name -ErrorAction SilentlyContinue
-    if ($a -and $a.Status -ne 'Disabled') { break }
 }`.trim()
         await execFileAsync('powershell.exe',
             ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', ps],
             { windowsHide: true, timeout: 15000 })
     }
 
-    async start() {
+    async _setAdapterAdminState(up) {
+        const ps = up
+            ? `$n='${ADAPTER_NAME}'; Enable-NetAdapter -Name $n -Confirm:$false -ErrorAction SilentlyContinue; Enable-NetAdapterBinding -Name $n -ComponentID ms_tcpip -Confirm:$false -ErrorAction SilentlyContinue`
+            : `$n='${ADAPTER_NAME}'; Disable-NetAdapterBinding -Name $n -ComponentID ms_tcpip -Confirm:$false -ErrorAction SilentlyContinue; Disable-NetAdapter -Name $n -Confirm:$false -ErrorAction SilentlyContinue`
+        await execFileAsync('powershell.exe',
+            ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', ps],
+            { windowsHide: true, timeout: 15000 })
+    }
+
+    async _ensureStopped() {
         await this._killTincd().catch(() => {})
+        await this._waitProcessGone(8000)
+        const { running } = await this.getStatus()
+        if (!running) return true
+        await this._killTincd().catch(() => {})
+        await this._waitProcessGone(5000)
+        return !(await this.getStatus()).running
+    }
 
-        // آداپتر باید موقع نصب اپ ساخته شده باشه. اگه نبود (مثلاً کاربر پاکش
-        // کرده) دوباره نصب کن — این حالت نادره.
-        if (!await this._adapterExists()) {
-            await this._installTapDriver().catch(() => {})
-        }
-
-        // Reset the adapter first so Windows registers it properly before tincd opens it
-        await this._resetAdapter().catch(e => console.log('[tinc reset]', e.message))
-
-        // Pre-set metric before tincd opens the adapter — tinc-up.bat sets it too but only
-        // after peer negotiation completes, which can be several seconds after game launch.
-        await execFileAsync('powershell.exe', [
-            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
-            `Set-NetIPInterface -InterfaceAlias '${ADAPTER_NAME}' -AutomaticMetric Disabled -InterfaceMetric 1 -ErrorAction SilentlyContinue`
-        ], { windowsHide: true, timeout: 10000 }).catch(e => console.log('[tinc metric]', e.message))
-
-        // اپ خودش با admin اجرا می‌شه، پس مستقیم spawn می‌کنیم (بدون UAC/PowerShell)
+    _spawnTincd() {
         const child = spawn(
             this.binaryPath,
             ['--config', this.configDir, '-n', this.netname],
             { cwd: this.vendorDir, detached: true, stdio: 'ignore', windowsHide: true }
         )
         child.unref()
+    }
 
-        await sleep(2000)
-        // فایروال و پروفایل شبکه رو اینجا ست کن، نه فقط توی tinc-up.bat
+    async _setPreMetric() {
+        await execFileAsync('powershell.exe', [
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+            `Set-NetIPInterface -InterfaceAlias '${ADAPTER_NAME}' -AutomaticMetric Disabled -InterfaceMetric 1 -ErrorAction SilentlyContinue`
+        ], { windowsHide: true, timeout: 10000 })
+    }
+
+    async _postStartSetup() {
         await this._ensureFirewallRules().catch(e => console.log('[tinc fw]', e.message))
         await this._setAdapterPrivate().catch(e => console.log('[tinc profile]', e.message))
+    }
+
+    async _resetAdapter() {
+        await this._reorderBindRegistry().catch(e => console.log('[tinc reorder]', e.message))
+        const ps = `
+$name = '${ADAPTER_NAME}'
+Disable-NetAdapterBinding -Name $name -ComponentID ms_tcpip -Confirm:$false -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 500
+Enable-NetAdapterBinding -Name $name -ComponentID ms_tcpip -Confirm:$false -ErrorAction SilentlyContinue`.trim()
+        await execFileAsync('powershell.exe',
+            ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', ps],
+            { windowsHide: true, timeout: 15000 })
+    }
+
+    /**
+     * قطع کامل tincd + آداپتر، reorder، و استارت مجدد (برای hotkey تعمیر شبکه).
+     */
+    async hardReset() {
+        this._stopWatchdog()
+        await this._ensureStopped()
+
+        await this._setAdapterAdminState(false).catch(e => console.log('[tinc disable]', e.message))
+        await sleep(600)
+        await this._reorderBindRegistry().catch(e => console.log('[tinc reorder]', e.message))
+        await sleep(300)
+        await this._setAdapterAdminState(true).catch(e => console.log('[tinc enable]', e.message))
+        await sleep(600)
+
+        if ((await this.getStatus()).running) {
+            await this._ensureStopped()
+        }
+
+        const hasConf = fs.existsSync(path.join(this.configDir, 'tinc.conf'))
+        if (!hasConf) {
+            return { success: true, restarted: false, running: false }
+        }
+
+        if (!await this._adapterExists()) {
+            await this._installTapDriver().catch(() => {})
+        }
+
+        await this._resetAdapter().catch(e => console.log('[tinc reset]', e.message))
+        await this._setPreMetric().catch(e => console.log('[tinc metric]', e.message))
+        this._spawnTincd()
+        await sleep(2000)
+        await this._postStartSetup()
+        this._startWatchdog()
+
+        const { running } = await this.getStatus()
+        return { success: true, restarted: true, running }
+    }
+
+    async start() {
+        await this._killTincd().catch(() => {})
+
+        if (!await this._adapterExists()) {
+            await this._installTapDriver().catch(() => {})
+        }
+
+        await this._resetAdapter().catch(e => console.log('[tinc reset]', e.message))
+        await this._setPreMetric().catch(e => console.log('[tinc metric]', e.message))
+        this._spawnTincd()
+        await sleep(2000)
+        await this._postStartSetup()
         this._startWatchdog()
         return { success: true }
     }
