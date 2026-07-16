@@ -83,6 +83,15 @@ export const netbirdAPI = {
     leaveGroup:   (groupId)      => api.delete(`/api/tarlan/groups/${groupId}/leave`),
 }
 
+// ─────────────── VPN (رفع تحریم) ───────────────────────────────────────
+
+export const vpnAPI = {
+    listServers: ()         => api.get('/api/vpn/servers'),
+    status:      ()         => api.get('/api/vpn/status'),
+    connect:     (serverId) => api.post(`/api/vpn/servers/${serverId}/connect`),
+    disconnect:  ()         => api.post('/api/vpn/disconnect'),
+}
+
 // ─────────────── FRIENDS ──────────────────────────────────────────────
 
 export const friendAPI = {
@@ -156,6 +165,7 @@ export const adminAPI = {
     getAllUsers:   ()                          => api.get('/api/admin/users'),
     deleteUser:   (id)                        => api.delete(`/api/admin/users/${id}`),
     restoreUser:  (id)                        => api.post(`/api/admin/users/${id}/restore`),
+    setUserRoles: (id, roles)                 => api.put(`/api/admin/users/${id}/roles`, { roles }),
 
     // Upload
     uploadGameLogo: (gameId, file)            => {

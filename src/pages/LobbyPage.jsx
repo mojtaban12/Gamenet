@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Check, Copy, Crown, MessageCircle, Smile, UserPlus, UserX, Volume2, VolumeX } from 'lucide-react'
+import { Check, Copy, Crown, Loader2, MessageCircle, Smile, UserPlus, UserX, Volume2, VolumeX } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useNetbirdStore } from '../store/netbirdStore'
 import { usePresenceStore } from '../store/presenceStore'
@@ -19,6 +19,7 @@ import {
     getLobbyHub,
 } from '../store/lobbyStore'
 import { useLocaleStore, getDir } from '../store/localeStore'
+import { usePingStore } from '../store/pingStore'
 import EmojiPicker from '../components/EmojiPicker'
 import LobbyFriendsPanel from '../components/LobbyFriendsPanel'
 import GamePanel from '../components/GamePanel'
@@ -26,6 +27,7 @@ import TeamChannels from '../components/TeamChannels'
 import VoiceControls from '../components/VoiceControls'
 import FloatingChat from '../components/FloatingChat'
 import NetworkGateBanner from '../components/NetworkGateBanner'
+import MeshPingMonitor from '../components/MeshPingMonitor'
 import AppShell from '../components/AppShell'
 import Icon from '../components/ui/Icon'
 
@@ -231,6 +233,7 @@ export default function LobbyPage() {
 
     return (
         <AppShell>
+            <MeshPingMonitor groupId={groupId} members={members} gameInfo={gameStateInfo} />
             <div className="shrink-0">
                 <NetworkGateBanner />
             </div>
@@ -274,12 +277,6 @@ export default function LobbyPage() {
 
                     {teamsEnabled && <TeamChannels groupId={groupId} isHost={isHost} />}
 
-                    <LobbyFriendsPanel
-                        groupId={groupId}
-                        groupName={groupName || groupId}
-                        onOpenChat={(f) => setChatFriend(f)}
-                    />
-
                     <div className="px-3 py-2.5 border-t border-og flex-shrink-0">
                         <button
                             type="button"
@@ -292,10 +289,10 @@ export default function LobbyPage() {
                 </div>
 
                 <div dir={dir} className="flex-1 min-w-0 min-h-0 flex flex-col gap-3 overflow-hidden">
-                    <div className="og-panel flex-shrink-0 overflow-hidden">
+                    <div className="og-panel flex-shrink-0">
                         <div className="px-4 py-3 border-b border-og">
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
                                     <h2 className="og-title text-sm text-og-accent truncate">{groupName || groupId}</h2>
                                     <div className="flex items-center gap-1.5 mt-0.5">
                                         <span className={connected ? 'status-online' : 'status-offline'} />
@@ -303,35 +300,39 @@ export default function LobbyPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0">
+                                    {!connected && (
+                                        <button
+                                            type="button"
+                                            onClick={handleReconnect}
+                                            disabled={reconnecting}
+                                            title={t('lobby.reconnectHint')}
+                                            className="px-2 py-1 rounded-md text-[11px] font-semibold border transition-colors disabled:opacity-50 text-og-danger border-og-danger bg-og-danger hover:bg-og-danger animate-pulse">
+                                            {reconnecting ? '...' : t('lobbyList.refresh')}
+                                        </button>
+                                    )}
                                     <button
                                         type="button"
-                                        onClick={handleReconnect}
-                                        disabled={reconnecting}
-                                        title={!connected ? t('lobby.reconnectHint') : t('lobbyList.refresh')}
-                                        className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-50 ${
-                                            !connected
-                                                ? 'text-og-accent bg-og-subtle hover:bg-og-hover'
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(groupId)
+                                            setCopied(true)
+                                            setTimeout(() => setCopied(false), 2000)
+                                        }}
+                                        title={groupId}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold shrink-0 transition-colors ${
+                                            copied
+                                                ? 'text-og-success bg-og-subtle'
                                                 : 'text-og-muted hover:text-og-accent hover:bg-og-hover'
                                         }`}>
-                                        {reconnecting ? '...' : t('lobbyList.refresh')}
-                                    </button>
-                                    <button
-                                    type="button"
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(groupId)
-                                        setCopied(true)
-                                        setTimeout(() => setCopied(false), 2000)
-                                    }}
-                                    title={groupId}
-                                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold shrink-0 transition-colors ${
-                                        copied
-                                            ? 'text-og-success bg-og-subtle'
-                                            : 'text-og-muted hover:text-og-accent hover:bg-og-hover'
-                                    }`}>
-                                    {copied ? <Icon icon={Check} size={12} /> : <Icon icon={Copy} size={12} />}
-                                    {copied ? t('common.copied') : t('lobby.copyInvite')}
+                                        {copied ? <Icon icon={Check} size={12} /> : <Icon icon={Copy} size={12} />}
+                                        {copied ? t('common.copied') : t('lobby.copyInvite')}
                                     </button>
                                 </div>
+                                <LobbyFriendsPanel
+                                    groupId={groupId}
+                                    groupName={groupName || groupId}
+                                    onOpenChat={(f) => setChatFriend(f)}
+                                    chatEnabled={friendsChatEnabled}
+                                />
                             </div>
                         </div>
 
@@ -443,10 +444,20 @@ function MemberRow({ member, isMe, isCurrentUserHost, isFriend, speaking, muted,
     const [showActions, setShowActions] = useState(false)
     const [adding, setAdding] = useState(false)
     const { channels, memberships } = useVoiceStore()
+    const resetting = usePingStore(s => s.resetting)
+    const pingStatus = usePingStore(s => s.status[m.userId ? m.userId.toString().toLowerCase() : ''])
 
     const displayIp = gameInfo?.game?.gameType === 2
         ? (m.ip || (isMe ? myIp : null))
         : (m.tincIp || (isMe ? myTincIp : null))
+
+    // نقطه‌ی وضعیت: در حین ری‌استارت شبکه (Ctrl+1) برای بقیه‌ی اعضا (نه خودم) یک
+    // لودینگ نشون می‌دیم چون تا مش دوباره بالا نیاد نمی‌شه بهشون پینگ زد. برای
+    // خودم پینگ/ریست معنی ندارد — دکمه‌ی من همیشه فقط به وضعیت اتصال چت (m.connected)
+    // وابسته است تا بعد از اتمام ری‌استارت فوراً سبز شود.
+    // برای بقیه: سبز یعنی پینگ برقراره، زرد چشمک‌زن یعنی هنوز پینگ برقرار نشده.
+    const showResetSpinner = !isMe && resetting && m.connected
+    const pingPending = !isMe && m.connected && !pingStatus?.ok
 
     const memberChannelId = memberships[m.userId]
     const memberChannel   = memberChannelId && memberChannelId !== 'lobby'
@@ -493,7 +504,20 @@ function MemberRow({ member, isMe, isCurrentUserHost, isFriend, speaking, muted,
                     {isMe && <span className="text-og-accent text-[11px] shrink-0">{t('common.you')}</span>}
                 </div>
                 <div className="font-mono text-og-muted text-[10px] mt-0.5 flex items-center gap-1">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.connected ? 'bg-gn-green' : 'bg-gn-muted'}`} />
+                    {showResetSpinner ? (
+                        <Icon icon={Loader2} size={9} className="shrink-0 animate-spin text-og-muted" />
+                    ) : (
+                        <span
+                            title={pingPending ? t('lobby.pingPendingHint') : undefined}
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                !m.connected
+                                    ? 'bg-gn-muted'
+                                    : pingPending
+                                        ? 'bg-yellow-400 animate-pulse'
+                                        : 'bg-gn-green'
+                            }`}
+                        />
+                    )}
                     {displayIp
                         ? <span className="ltr">{displayIp}</span>
                         : <span>{m.connected ? t('lobby.connectedStatus') : t('lobby.disconnectedStatus')}</span>

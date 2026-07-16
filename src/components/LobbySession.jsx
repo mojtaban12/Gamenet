@@ -2,7 +2,9 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
-import { leaveLobby, getMeshState, useLobbyStore } from '../store/lobbyStore'
+import { useNetbirdStore } from '../store/netbirdStore'
+import { usePingStore } from '../store/pingStore'
+import { leaveLobby, getMeshState, useLobbyStore, recoverLobbyNetbird } from '../store/lobbyStore'
 import { refreshMesh } from '../utils/meshNetwork'
 
 export default function LobbySession() {
@@ -15,8 +17,16 @@ export default function LobbySession() {
     }, [token])
 
     useEffect(() => {
+        if (!window.electron?.tinc?.onHardResetStart) return
+        return window.electron.tinc.onHardResetStart(() => {
+            usePingStore.getState().setResetting(true)
+        })
+    }, [])
+
+    useEffect(() => {
         if (!window.electron?.tinc?.onHardResetDone) return
         return window.electron.tinc.onHardResetDone(async (result) => {
+            usePingStore.getState().setResetting(false)
             if (!result?.success) {
                 toast(t('tinc.resetFailed', { error: result?.error || '' }), 'error', 5000)
                 return
@@ -39,6 +49,15 @@ export default function LobbySession() {
             }
         })
     }, [toast, t])
+
+    // VPN recovered while still in lobby — re-join NetBird group (removed on SignalR drop).
+    useEffect(() => {
+        return useNetbirdStore.subscribe((state, prev) => {
+            if (!prev.connected && state.connected && useLobbyStore.getState().activeLobby?.groupId) {
+                recoverLobbyNetbird().catch(() => {})
+            }
+        })
+    }, [])
 
     return null
 }

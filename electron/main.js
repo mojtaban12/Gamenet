@@ -11,6 +11,10 @@ const { NetbirdCLI } = require('./netbird')
 const { AppUpdater, applyPendingUpdates } = require('./updater')
 const Store = require('./store')
 const overlayNative = require('./overlay-native')
+const {
+    ensureCrashWatchdogScheduledTask,
+    startCrashMarkerHeartbeat,
+} = require('./crash-watchdog')
 const store = new Store()
 
 // Apply any staged updates before anything else starts
@@ -30,6 +34,8 @@ function initUpdater() {
 }
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+
+let crashHeartbeatTimer = null
 
 // ── چک دسترسی Administrator ─────────────────────────────────────────────
 // اپ به admin نیاز داره (نصب درایور، سرویس، netsh). اگه admin نیست،
@@ -324,6 +330,7 @@ function registerTincResetShortcut() {
     try {
         const ok = globalShortcut.register(accel, async () => {
             try {
+                mainWindow?.webContents.send('tinc:hard-reset-start')
                 const tinc = getTincInstance()
                 const result = await tinc.hardReset()
                 mainWindow?.webContents.send('tinc:hard-reset-done', result)
@@ -409,6 +416,17 @@ app.whenReady().then(async () => {
     registerOverlayShortcut()
     registerVoiceShortcut()
     registerTincResetShortcut()
+
+    // Watchdog (best-effort): Scheduled Task هر ۱ دقیقه چک می‌کنه که اپ باز باشه؛
+    // اگه بسته شد (کرش یا بستن عادی) و ~۱ دقیقه گذشت، سرویس نت‌برد/tinc رو کامل جمع می‌کنه.
+    // Task args are fixed to pass path-to-app, so the Electron usage popup shouldn't happen.
+    try {
+        ensureCrashWatchdogScheduledTask({
+            exePath: process.execPath,
+            appPath: app.getAppPath(),
+        })
+        crashHeartbeatTimer = startCrashMarkerHeartbeat({ intervalMs: 10000 })
+    } catch {}
 
     // IPC: تنظیم/خواندن شورت‌کات
     ipcMain.handle('shortcut:set', (_, name, accelerator) => {
@@ -507,7 +525,12 @@ app.on('will-quit', () => {
 
 app.on('before-quit', (e) => {
     if (isCleanupDone()) return
+    try { if (crashHeartbeatTimer) clearInterval(crashHeartbeatTimer) } catch {}
     app.isQuitting = true
     e.preventDefault()
+    // به renderer خبر بده تا موازی با cleanup شبکه (که چند ثانیه طول می‌کشه)
+    // درخواست لاگ‌اوت سمت سرور رو هم بفرسته — این مسیر (OS shutdown/Alt+F4)
+    // قبلاً هیچ سیگنالی به renderer نمی‌فرستاد.
+    mainWindow?.webContents.send('window:quitting')
     performAppCleanup().then(() => app.exit(0))
 })

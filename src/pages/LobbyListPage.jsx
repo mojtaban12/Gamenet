@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, Copy, Eye, EyeOff, Lock, Swords, X } from 'lucide-react'
 import { netbirdAPI } from '../api'
+import { withPeerRecovery } from '../utils/peerRecovery'
 import { useLobbyStore } from '../store/lobbyStore'
 import { useSetupStore, PHASE } from '../store/setupStore'
 import AppShell from '../components/AppShell'
@@ -41,7 +42,7 @@ export default function LobbyListPage() {
         setJoiningId(groupId)
         setError('')
         try {
-            await netbirdAPI.joinGroup(groupId, password)
+            await withPeerRecovery(() => netbirdAPI.joinGroup(groupId, password))
             navigate(`/lobby/${groupId}`)
         } catch (e) {
             const msg = e.response?.data?.message || t('lobbyList.joinError')
@@ -65,7 +66,7 @@ export default function LobbyListPage() {
         setJoiningId(trimmed)
         setError('')
         try {
-            await netbirdAPI.joinGroup(trimmed)
+            await withPeerRecovery(() => netbirdAPI.joinGroup(trimmed))
             navigate(`/lobby/${trimmed}`)
         } catch (e) {
             if (e.response?.data?.requiresPassword) {
@@ -398,7 +399,7 @@ function CreateLobbyModal({ onClose, onCreate }) {
         setCreating(true)
         setError('')
         try {
-            const res = await netbirdAPI.createGroup(name.trim(), isPrivate, password)
+            const res = await withPeerRecovery(() => netbirdAPI.createGroup(name.trim(), isPrivate, password))
             onCreate(res.data.id)
         } catch (e) {
             setError(e.response?.data?.message || t('lobbyList.createError'))

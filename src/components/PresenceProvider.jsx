@@ -9,6 +9,7 @@ import { useUpdateStore } from '../store/updateStore'
 import { useLobbyStore } from '../store/lobbyStore'
 import { friendAPI, messageAPI } from '../api'
 import { notify } from '../utils/notify'
+import { handleForceLogout } from '../utils/forceLogout'
 import { isOlderVersion } from '../utils/version'
 import i18n from '../i18n'
 
@@ -205,39 +206,7 @@ export default function PresenceProvider({ children }) {
             })
 
             // ── خروج اجباری (لاگین روی سیستم دیگه) ──────────────────
-            hub.on('ForceLogout', (data) => {
-                // آیا توکنِ فعلیِ این سیستم همون سشنِ جدیده؟ یعنی این ForceLogout
-                // در واقع مالِ خودِ همین سیستمه و نباید لاگ‌اوت شیم.
-                const isOwnNewSession = () => {
-                    try {
-                        const myToken = useAuthStore.getState().token
-                        if (myToken && data?.newSessionId) {
-                            const payload = JSON.parse(atob(myToken.split('.')[1]))
-                            return payload.sid === data.newSessionId
-                        }
-                    } catch {}
-                    return false
-                }
-
-                // اگه همین الان معلومه خودمونیم، اصلاً کاری نکن.
-                if (isOwnNewSession()) return
-
-                // دوباره لحظه‌ی خروج چک کن (نه فقط موقع دریافت): وقتی کاربر برمی‌گرده
-                // و لاگین می‌کنه ولی یک سشنِ ghost قدیمی هنوز پاک نشده، پاسخِ لاگین
-                // (توکنِ سشن جدید) ممکنه با کمی تأخیر بعد از این پیام برسه. با چکِ
-                // مجدد در این لحظه، اگه توکن به سشن جدید آپدیت شده باشه خودمون رو
-                // بیرون نمی‌ندازیم — رفعِ باگِ «کاربر دیگه‌ای آنلاین شد» موقع برگشت.
-                setTimeout(() => {
-                    if (isOwnNewSession()) return
-                    notify({
-                        title: i18n.t('presence.logoutTitle'),
-                        body: data?.reason || i18n.t('presence.logoutBody'),
-                        type: 'info',
-                        sound: 'notify'
-                    })
-                    useAuthStore.getState().logout()
-                }, 1500)
-            })
+            hub.on('ForceLogout', (data) => handleForceLogout(data))
 
             // ── دعوت لابی ───────────────────────────────────────────
             hub.on('LobbyInvite', (data) => {

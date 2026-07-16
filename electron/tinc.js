@@ -35,9 +35,10 @@ class TincCLI {
     }
 
     _resolveVendorDir() {
+        // مثل netbird.js: زیر ELECTRON_RUN_AS_NODE=1 آبجکت app وجود نداره،
+        // ولی process.resourcesPath هنوز درسته — مستقیم از همون استفاده کن.
         try {
-            const { app } = require('electron')
-            if (app.isPackaged) {
+            if (process.resourcesPath) {
                 const inVendor = path.join(process.resourcesPath, 'vendor')
                 if (fs.existsSync(path.join(inVendor, BINARY_NAME))) return inVendor
                 return process.resourcesPath
@@ -374,6 +375,27 @@ Enable-NetAdapterBinding -Name $name -ComponentID ms_tcpip -Confirm:$false -Erro
 
         const { running } = await this.getStatus()
         return { success: true, restarted: true, running }
+    }
+
+    /**
+     * پینگ یک IP توی مش (یک اکو، تایم‌اوت ۱ ثانیه) — برای نمایش وضعیت اتصال
+     * زنده‌ی هر عضو لابی توی UI استفاده می‌شه.
+     */
+    async pingHost(ip) {
+        if (!ip) return { ok: false, ms: null }
+        try {
+            const { stdout } = await execFileAsync(
+                'ping', ['-n', '1', '-w', '1000', ip],
+                { windowsHide: true, timeout: 3000 }
+            )
+            const out = stdout || ''
+            const ok = /Reply from/i.test(out) &&
+                !/Destination host unreachable|Request timed out/i.test(out)
+            const m = out.match(/time[=<]\s*([\d.]+)\s*ms/i)
+            return { ok, ms: m ? parseFloat(m[1]) : null }
+        } catch {
+            return { ok: false, ms: null }
+        }
     }
 
     async start() {

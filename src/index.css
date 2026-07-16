@@ -147,7 +147,7 @@
     /* Status dots */
     .status-dot     { @apply w-2 h-2 rounded-full inline-block; }
     .status-online  { @apply status-dot bg-gn-green; box-shadow: 0 0 6px var(--og-success-glow); }
-    .status-offline { @apply status-dot bg-gn-muted; }
+    .status-offline { @apply status-dot; background: var(--og-danger); box-shadow: 0 0 6px var(--og-danger-border); }
     .status-busy    { @apply status-dot bg-yellow-400; }
 }
 
@@ -388,6 +388,9 @@
     .text-og-success { color: var(--og-success); }
     .text-og-danger { color: var(--og-danger); }
     .text-og-primary { color: var(--og-primary); }
+    .text-og-secondary { color: var(--og-secondary); }
+    .bg-og-panel { background: var(--og-subtle-bg); }
+    .hover\:bg-og-card-hover:hover { background: var(--og-card-hover); }
     .border-og { border-color: var(--og-border); }
     .bg-og-subtle { background: var(--og-subtle-bg); }
     .bg-og-tab { background: var(--og-tab-bg); }
@@ -395,6 +398,9 @@
     .bg-og-avatar { background: var(--og-avatar-bg); }
     .bg-og-nav-active { background: var(--og-nav-active-bg); }
     .border-og-primary { border-color: var(--og-primary-border); }
+    .border-og-danger { border-color: var(--og-danger-border); }
+    .bg-og-danger { background: var(--og-danger-bg); }
+    .hover\:bg-og-danger:hover { background: var(--og-danger-bg-hover); }
     .hover\:bg-og-card:hover { background: var(--og-card-hover); }
     .hover\:bg-og-hover:hover { background: var(--og-hover); }
     .hover\:text-og-accent:hover { color: var(--og-primary-soft); }

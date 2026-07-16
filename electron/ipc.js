@@ -44,6 +44,12 @@ async function performAppCleanup() {
             new Promise(r => setTimeout(r, 5000))
         ])
         cleanupDone = true
+
+        // Marker/heartbeat را عمداً پاک نمی‌کنیم: اگه اپ دیگه دوباره باز نشه،
+        // heartbeat طبیعتاً stale می‌شه و Scheduled Task (هر ۱ دقیقه) بعد از
+        // ~۱ دقیقه سرویس نت‌برد/tinc باقی‌مانده رو کامل جمع می‌کنه — چه با
+        // بستن عادی (X) چه با کرش. اگه اپ ظرف همون بازه دوباره باز شه،
+        // heartbeat تازه می‌شه و واچداگ کاری نمی‌کنه (سرعت reconnect حفظ می‌شه).
     })()
     return cleanupPromise
 }
@@ -249,8 +255,9 @@ function setupIpcHandlers(ipcMain, mainWindow, callbacks = {}) {
     }))
 
     ipcMain.handle('netbird:uninstall', async () => {
-        try { await netbird.stopAndUninstall() } catch {}
-        return { success: true }
+        let success = false
+        try { success = await netbird.stopAndUninstall() } catch {}
+        return { success }
     })
 
     ipcMain.handle('netbird:status', async () => {
@@ -304,6 +311,14 @@ function setupIpcHandlers(ipcMain, mainWindow, callbacks = {}) {
 
     ipcMain.handle('tinc:status', async () => {
         return await tinc.getStatus()
+    })
+
+    ipcMain.handle('tinc:ping', async (_, ip) => {
+        try {
+            return await tinc.pingHost(ip)
+        } catch (err) {
+            return { ok: false, ms: null }
+        }
     })
 
     ipcMain.handle('tinc:hard-reset', async () => {

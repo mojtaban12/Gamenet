@@ -6,6 +6,7 @@ import { useUpdateStore } from '../store/updateStore'
 import { useSetupStore, PHASE } from '../store/setupStore'
 import { friendAPI } from '../api'
 import { netbirdAPI } from '../api'
+import { withPeerRecovery } from '../utils/peerRecovery'
 import { usePresenceStore } from '../store/presenceStore'
 import Icon from './ui/Icon'
 
@@ -75,7 +76,7 @@ function NotificationItem({ notif, onRemove }) {
                         onClick={async () => {
                             if (!networkReady) return
                             try {
-                                await netbirdAPI.joinGroup(notif.groupId)
+                                await withPeerRecovery(() => netbirdAPI.joinGroup(notif.groupId))
                                 navigate(`/lobby/${notif.groupId}`)
                             } catch {}
                             onRemove()

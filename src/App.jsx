@@ -9,6 +9,7 @@ import { useSettingStore } from './store/settingStore'
 import { initAudio } from './utils/sound'
 import { versionAPI } from './api'
 import { isOlderVersion } from './utils/version'
+import { notifyServerLogoutOnQuit } from './utils/logout'
 import TitleBar from './components/TitleBar'
 import PresenceProvider from './components/PresenceProvider'
 import LobbySession from './components/LobbySession'
@@ -26,6 +27,7 @@ import LobbyPage from './pages/LobbyPage'
 import FriendsPage from './pages/FriendsPage'
 import ProfilePage from './pages/ProfilePage'
 import AdminPage from './pages/AdminPage'
+import SanctionsReliefPage from './pages/SanctionsReliefPage'
 
 const APP_VERSION = window.electron?.appVersion || (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0')
 
@@ -55,13 +57,21 @@ function ProtectedRoute({ children }) {
 
     const appDisabled = settingsLoaded
         && adminSettings['app.enabled'] === 'false'
-        && user?.role !== 'Admin'
+        && !user?.roles?.includes('Admin')
 
     return (
         <div className="flex-1 min-h-0 min-w-0 w-full flex flex-col overflow-hidden">
             {appDisabled ? <MaintenanceScreen /> : children}
         </div>
     )
+}
+
+function AdminRoute({ children }) {
+    const { user } = useAuthStore()
+    const isAdmin = !!user?.roles?.includes('Admin')
+
+    if (!isAdmin) return <Navigate to="/home" replace />
+    return children
 }
 
 function RootRedirect() {
@@ -130,11 +140,19 @@ export default function App() {
         window.electron?.window.onQuitting?.(() => {
             openExitModal()
             setQuitting(true)
+            // مسیرهای quit که از tray/OS می‌آن (نه دکمه‌ی داخل اپ) — همون لحظه که
+            // سیگنال quitting می‌رسه، لاگ‌اوت سمت سرور رو موازی با cleanup شبکه‌ی
+            // پروسس main شروع کن (چند ثانیه فرصت هست تا قبل از app.exit تموم شه).
+            notifyServerLogoutOnQuit()
         })
     }, [openExitModal])
 
     async function handleQuit() {
         setQuitting(true)
+        // بستن اپ (نه فقط "خروج از حساب") هم باید سشن سمت سرور رو ببنده — peer
+        // نت‌برد/presence سرور فوراً پاک شه، نه اینکه منتظر جاب‌های idle/stale
+        // بمونیم. سرویس نت‌برد محلی عمداً دست نمی‌خوره (برای reconnect سریع).
+        await notifyServerLogoutOnQuit()
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
         try {
             await window.electron?.window.quit()
@@ -160,9 +178,18 @@ export default function App() {
 
     async function handleLogoutConfirm() {
         setLoggingOut(true)
-        await logout()
-        setLoggingOut(false)
-        closeLogoutModal()
+        try {
+            await logout()
+
+            if (exitModalSource === 'window') {
+                await window.electron?.window.quit()
+                return
+            }
+
+            closeLogoutModal()
+        } finally {
+            setLoggingOut(false)
+        }
     }
 
     function handleLogoutCancel() {
@@ -195,7 +222,8 @@ export default function App() {
                             <Route path="/lobby/:groupId" element={<ProtectedRoute><LobbyPage /></ProtectedRoute>} />
                             <Route path="/friends" element={<ProtectedRoute><FriendsPage /></ProtectedRoute>} />
                             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                            <Route path="/admin"   element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+                            <Route path="/admin"   element={<ProtectedRoute><AdminRoute><AdminPage /></AdminRoute></ProtectedRoute>} />
+                            <Route path="/sanctions-relief" element={<ProtectedRoute><AdminRoute><SanctionsReliefPage /></AdminRoute></ProtectedRoute>} />
                             <Route path="*"        element={<RootRedirect />} />
                         </Routes>
                     </div>

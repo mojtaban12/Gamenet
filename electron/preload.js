@@ -68,10 +68,16 @@ contextBridge.exposeInMainWorld('electron', {
         stop:        ()         => ipcRenderer.invoke('tinc:stop'),
         hardReset:   ()         => ipcRenderer.invoke('tinc:hard-reset'),
         status:      ()         => ipcRenderer.invoke('tinc:status'),
+        ping:        (ip)       => ipcRenderer.invoke('tinc:ping', ip),
         onHardResetDone: (cb) => {
             const listener = (_, result) => cb(result)
             ipcRenderer.on('tinc:hard-reset-done', listener)
             return () => ipcRenderer.removeListener('tinc:hard-reset-done', listener)
+        },
+        onHardResetStart: (cb) => {
+            const listener = () => cb()
+            ipcRenderer.on('tinc:hard-reset-start', listener)
+            return () => ipcRenderer.removeListener('tinc:hard-reset-start', listener)
         },
     },
 

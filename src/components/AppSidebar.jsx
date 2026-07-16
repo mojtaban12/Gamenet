@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Home, Swords, Users, History, ShieldCheck } from 'lucide-react'
+import { Home, Swords, Users, Globe, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useNetbirdStore } from '../store/netbirdStore'
 import { useUiStore } from '../store/uiStore'
@@ -15,6 +15,7 @@ function getActiveNavId(pathname) {
     if (pathname.startsWith('/friends')) return 'friends'
     if (pathname.startsWith('/profile')) return 'profile'
     if (pathname.startsWith('/admin')) return 'admin'
+    if (pathname.startsWith('/sanctions-relief')) return 'sanctionsRelief'
     return null
 }
 
@@ -63,7 +64,7 @@ export default function AppSidebar() {
     const location = useLocation()
     const { user } = useAuthStore()
     const { connected, reconnecting } = useNetbirdStore()
-    const isAdmin = user?.role === 'Admin'
+    const isAdmin = !!user?.roles?.includes('Admin')
     const openExitModal = useUiStore(s => s.openExitModal)
     const activeLobby = useLobbyStore(s => s.activeLobby)
     const activeId = getActiveNavId(location.pathname)
@@ -74,7 +75,7 @@ export default function AppSidebar() {
         { id: 'home', icon: Home, label: t('sidebar.home'), path: '/home' },
         { id: 'rooms', icon: Swords, label: t('sidebar.rooms'), path: '/rooms' },
         { id: 'friends', icon: Users, label: t('sidebar.friends'), path: '/friends' },
-        { id: 'history', icon: History, label: t('sidebar.history'), path: null },
+        ...(isAdmin ? [{ id: 'sanctionsRelief', icon: Globe, label: t('sidebar.sanctionsRelief'), path: '/sanctions-relief' }] : []),
     ]
 
     return (

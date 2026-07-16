@@ -12,36 +12,39 @@ function arrayBufferToBase64(buffer) {
     return btoa(binary)
 }
 
+export async function isTincRunning() {
+    try {
+        const st = await window.electron?.tinc?.status?.()
+        return !!st?.running
+    } catch {
+        return false
+    }
+}
+
 /**
- * شبکه L2 لابی رو بالا میاره:
- * 1. به mesh لابی join (با NetBird IP)
- * 2. config zip بگیر
- * 3. tinc up
- * onProgress(step, msg) برای نمایش پیشرفت
+ * شبکه L2 لابی — join mesh + اعمال config.
+ * اگر tinc از قبل در حال اجراست فقط hosts را زنده به‌روز می‌کند (بدون kill/restart).
  */
 export async function bringUpMesh(lobbyId, underlayIp, onProgress = () => {}) {
-    // ۰. مطمئن شو node ثبت شده (idempotent — اگه باشه همون رو برمی‌گردونه)
     onProgress('register', i18n.t('mesh.registering'))
     try {
         await tincAPI.register()
-    } catch (e) {
-        // اگه از قبل ثبت شده باشه ممکنه خطا نده، ادامه بده
-    }
+    } catch {}
 
-    // ۱. join mesh
     onProgress('join', i18n.t('mesh.joining'))
     const joinRes = await tincAPI.joinLobby(lobbyId, underlayIp)
     const version = joinRes.data?.version ?? 0
     const tincIp  = joinRes.data?.tincIp ?? null
 
-    // ۲. config zip
     onProgress('config', i18n.t('mesh.gettingConfig'))
     const res = await tincAPI.getConfig(lobbyId)
     const zipB64 = arrayBufferToBase64(res.data)
 
-    // ۳. tinc up (نصب config + start سرویس)
+    const running = await isTincRunning()
     onProgress('start', i18n.t('mesh.startingConnection'))
-    const result = await window.electron.tinc.applyConfig(zipB64)
+    const result = running
+        ? await window.electron.tinc.updateConfig(zipB64)
+        : await window.electron.tinc.applyConfig(zipB64)
     if (!result.success) throw new Error(result.error || i18n.t('mesh.setupError'))
 
     onProgress('done', i18n.t('mesh.ready'))

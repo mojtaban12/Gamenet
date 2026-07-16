@@ -10,6 +10,20 @@ const BINARY_NAME  = 'tarservice.exe'        // خود باینری netbird (CLI
 const SERVICE_NAME = 'Netbird'              // اسم واقعی سرویس ویندوز که netbird می‌سازد
 const FW_RULE_NAME = 'TarGame P2P'          // اسم رول فایروال
 
+function _logPath() {
+    const dir = path.join(process.env.ProgramData || 'C:\\ProgramData', 'TarGame', 'watchdog')
+    return path.join(dir, 'netbird-uninstall-last.log')
+}
+
+function _writeLog(line) {
+    try {
+        const logFile = _logPath()
+        const logDir = path.dirname(logFile)
+        fs.mkdirSync(logDir, { recursive: true })
+        fs.appendFileSync(logFile, `${new Date().toISOString()} ${line}\n`, 'utf8')
+    } catch {}
+}
+
 class NetbirdCLI {
     constructor() {
         this.vendorDir  = this._resolveVendorDir()
@@ -22,12 +36,17 @@ class NetbirdCLI {
         this._reconnecting  = false
         this._enabled       = false  // وقتی false شد، watchdog کاری نمی‌کنه (خروج/logout)
         this._lastIp        = null   // آخرین IP سالم — همون باید بعد از reconnect بمونه
+        this._reconnectFailCount = 0
+        this._reregisterPending  = false
     }
 
     _resolveVendorDir() {
+        // عمداً از require('electron').app استفاده نمی‌کنیم: وقتی این فایل زیر
+        // ELECTRON_RUN_AS_NODE=1 (واچداگِ سبک، بدون Chromium) اجرا می‌شه، آبجکت
+        // app اصلاً وجود نداره ولی process.resourcesPath همچنان توسط خودِ باینری
+        // Electron ست می‌شه — پس مستقیم از همون استفاده می‌کنیم.
         try {
-            const { app } = require('electron')
-            if (app.isPackaged) {
+            if (process.resourcesPath) {
                 const inVendor = path.join(process.resourcesPath, 'vendor')
                 if (fs.existsSync(path.join(inVendor, BINARY_NAME))) return inVendor
                 return process.resourcesPath   // stub installer puts binaries directly in resources/
@@ -160,7 +179,10 @@ if (-not $existing) {
 
             // ثبت با اسم دلخواه (نام کاربر) — workaround نت‌برد: login --hostname سپس up
             // (فلگ --hostname روی up مستقیماً اعمال نمی‌شه؛ باید موقع login باشه)
-            const loginArgs = ['login', '--management-url', managementUrl, '--setup-key', setupKey]
+            // --no-browser: هرگز نباید صفحه OAuth/SSO باز شه (ما همیشه با setup-key
+            // ثبت‌نام می‌کنیم؛ اگه سرور به هر دلیلی SSO خواست، باید fail شه نه اینکه
+            // مرورگر رو باز کنه و بی‌نهایت منتظر کاربر بمونه)
+            const loginArgs = ['login', '--management-url', managementUrl, '--setup-key', setupKey, '--no-browser']
             // نت‌برد فقط حروف/عدد/خط‌تیره قبول می‌کنه
             const safeName = hostname ? String(hostname).replace(/[^a-zA-Z0-9-]/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) : null
             if (safeName) loginArgs.push('--hostname', safeName)
@@ -176,7 +198,10 @@ if (-not $existing) {
         // اگه hostname نبود و login نزدیم، key رو روی up بذار.
         // --management-url فقط وقتی که داریمش؛ در reconnect بدون URL، نت‌برد از
         // پروفایلِ ذخیره‌شده استفاده می‌کنه (همون identity ⇒ همون IP).
-        const args = ['up', '--mtu', '1448', '--wireguard-port', '51820']
+        // --no-browser هم اینجا لازمه: اگه سرور موقع up (بدون login جدا) نیاز به
+        // SSO تشخیص بده، به‌جای باز کردن مرورگر و هنگ کردن بی‌نهایت این proc، باید
+        // fail شه تا watchdog بتونه retry/reregister کنه.
+        const args = ['up', '--mtu', '1448', '--wireguard-port', '51820', '--no-browser']
         if (managementUrl) args.splice(1, 0, '--management-url', managementUrl)
         if (setupKey && !hostname) args.push('--setup-key', setupKey)
 
@@ -187,14 +212,34 @@ if (-not $existing) {
                 cwd: this.vendorDir
             })
             let output = ''
+            let settled = false
+
+            // محافظ: اگه daemon (به هر دلیلی، مثلاً منتظر SSO) گیر کنه و close نده،
+            // این proc بی‌نهایت آویزون نمونه و watchdog قفل نشه.
+            const killTimer = setTimeout(() => {
+                if (settled) return
+                settled = true
+                console.log('[netbird up] TIMEOUT — killing stuck process')
+                try { proc.kill() } catch {}
+                reject(new Error('اتصال به نت‌برد timeout شد'))
+            }, 25000)
+
             proc.stdout?.on('data', d => { output += d.toString(); console.log('[nb]', d.toString().trim()) })
             proc.stderr?.on('data', d => { output += d.toString(); console.log('[nb ERR]', d.toString().trim()) })
             proc.on('close', (code) => {
+                if (settled) return
+                settled = true
+                clearTimeout(killTimer)
                 console.log('[netbird up] exit code:', code)
                 if (code === 0 || code === 1) resolve({ success: true, output })
                 else reject(new Error(output || `Exit code ${code}`))
             })
-            proc.on('error', reject)
+            proc.on('error', (err) => {
+                if (settled) return
+                settled = true
+                clearTimeout(killTimer)
+                reject(err)
+            })
         })
     }
 
@@ -257,15 +302,33 @@ foreach ($p in $paths) {
         this.stopWatchdog()   // logout — دیگه نباید reconnect بشه
         this.managementUrl = null
         const bin = this.binaryPath
+        _writeLog(`uninstall-start bin=${bin}`)
         // 1) down — قطع اتصال (کاربر از سرور آفلاین شه)
-        try { await execFileAsync(bin, ['down'], { windowsHide: true, timeout: 8000 }) } catch (e) { console.log('[nb down]', e.message) }
+        try { await execFileAsync(bin, ['down'], { windowsHide: true, timeout: 8000 }) } catch (e) { _writeLog(`nb-down-err=${e?.message || String(e)}`) }
         await sleep(800)
         // 2) service stop
-        try { await execFileAsync(bin, ['service', 'stop'], { windowsHide: true, timeout: 8000 }) } catch (e) { console.log('[nb svc stop]', e.message) }
+        try { await execFileAsync(bin, ['service', 'stop'], { windowsHide: true, timeout: 8000 }) } catch (e) { _writeLog(`nb-svc-stop-err=${e?.message || String(e)}`) }
         await sleep(800)
         // 3) service uninstall
-        try { await execFileAsync(bin, ['service', 'uninstall'], { windowsHide: true, timeout: 8000 }) } catch (e) { console.log('[nb svc uninstall]', e.message) }
-        return true
+        try { await execFileAsync(bin, ['service', 'uninstall'], { windowsHide: true, timeout: 8000 }) } catch (e) { _writeLog(`nb-svc-uninstall-err=${e?.message || String(e)}`) }
+        await sleep(500)
+
+        // 4) verify — اگه CLI شکست خورد (مثلاً daemon قفل بود)، با sc.exe مستقیم
+        // روی SCM تلاش کن. این fallback جلوی «سرویس زامبی» رو می‌گیره که قبلاً
+        // فقط با `sc delete netbird` دستی قابل رفع بود.
+        let stillInstalled = false
+        try { stillInstalled = await this.isInstalled() } catch {}
+        if (stillInstalled) {
+            _writeLog('nb-svc-uninstall still installed after CLI attempt, retrying via sc.exe')
+            try { await execFileAsync('sc', ['stop', SERVICE_NAME], { windowsHide: true, timeout: 8000 }) } catch (e) { _writeLog(`sc-stop-err=${e?.message || String(e)}`) }
+            await sleep(1000)
+            try { await execFileAsync('sc', ['delete', SERVICE_NAME], { windowsHide: true, timeout: 8000 }) } catch (e) { _writeLog(`sc-delete-err=${e?.message || String(e)}`) }
+            await sleep(500)
+            try { stillInstalled = await this.isInstalled() } catch {}
+        }
+
+        _writeLog(`uninstall-end stillInstalled=${stillInstalled}`)
+        return !stillInstalled
     }
 
     // ─────────────── STATUS ────────────────────────────────────────────
@@ -320,6 +383,13 @@ foreach ($p in $paths) {
         try {
             await execFileAsync(bin, ['service', 'start'], { windowsHide: true, timeout: 8000 })
         } catch {}
+        // بعد از قطعی/عوض شدن IP، WireGuard همیشه خودش interface/route جدید رو
+        // تشخیص نمی‌ده. یه down تمیز قبل از up کمک می‌کنه سوکت/route با IP محلی
+        // جدید از نو بایند شه (به‌جای اینکه up روی یه اتصال نیمه‌مرده no-op بمونه).
+        try {
+            await execFileAsync(bin, ['down'], { windowsHide: true, timeout: 8000 })
+            await sleep(500)
+        } catch {}
         // up بدون key ⇒ همون identity ⇒ همون IP
         await this.connect(this.managementUrl)
         return this.waitForConnection(20000)
@@ -329,11 +399,12 @@ foreach ($p in $paths) {
     startWatchdog(onChange, intervalMs = 12000) {
         this.stopWatchdog()
         this._enabled = true
+        this._reconnectFailCount = 0
+        this._reregisterPending  = false
         this._watchdogTimer = setInterval(() => {
             this._watchdogTick(onChange).catch(() => {})
         }, intervalMs)
     }
-
     stopWatchdog() {
         this._enabled = false
         if (this._watchdogTimer) {
@@ -351,22 +422,36 @@ foreach ($p in $paths) {
 
         if (status.connected && status.ip) {
             this._lastIp = status.ip
+            this._reconnectFailCount = 0
+            this._reregisterPending = false
             onChange?.({ ...status, reconnecting: false })
             return
         }
 
-        // قطع شده — تلاش برای بالا آوردن مجدد با همون IP.
-        // (managementUrl لازم نیست؛ نت‌برد از پروفایلِ ذخیره‌شده می‌خونه.)
+        // تعداد شکست‌های reconnect زیاد شده — پروفایل/پیر روی سرور احتمالاً پاک شده
+        // (ریست سرویس نت‌برد). دیگه بی‌نهایت up نزن؛ منتظر ثبت مجدد کامل از رندرر بمون.
+        if (this._reregisterPending) {
+            onChange?.({ connected: false, ip: this._lastIp, reconnecting: false, needsReregister: true })
+            return
+        }
+
         this._reconnecting = true
         onChange?.({ connected: false, ip: this._lastIp, reconnecting: true })
         try {
             const after = await this.reconnect()
             if (!this._enabled) return
             if (after?.ip) this._lastIp = after.ip
+            this._reconnectFailCount = 0
             onChange?.({ ...after, reconnecting: false })
         } catch (e) {
             console.log('[nb watchdog reconnect]', e.message)
-            onChange?.({ connected: false, ip: this._lastIp, reconnecting: false })
+            this._reconnectFailCount = (this._reconnectFailCount || 0) + 1
+            if (this._reconnectFailCount >= 3) {
+                this._reregisterPending = true
+                onChange?.({ connected: false, ip: this._lastIp, reconnecting: false, needsReregister: true })
+            } else {
+                onChange?.({ connected: false, ip: this._lastIp, reconnecting: false })
+            }
         } finally {
             this._reconnecting = false
         }

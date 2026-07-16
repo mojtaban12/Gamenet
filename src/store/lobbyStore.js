@@ -4,7 +4,8 @@ import { netbirdAPI, teamAPI, tincAPI, gameAPI } from '../api'
 import { useAuthStore } from './authStore'
 import { useVoiceStore } from './voiceStore'
 import { useNetbirdStore } from './netbirdStore'
-import { refreshMesh, tearDownMesh, bringUpMesh } from '../utils/meshNetwork'
+import { refreshMesh, tearDownMesh, bringUpMesh, isTincRunning } from '../utils/meshNetwork'
+import { handleForceLogout } from '../utils/forceLogout'
 import i18n from '../i18n'
 
 const getApiUrl = () => import.meta.env.VITE_API_URL || 'http://localhost:5224'
@@ -46,7 +47,8 @@ async function shouldUseTincMesh(groupId) {
 }
 
 async function startLobbyMesh(groupId) {
-    if (meshActive || meshStarting || sessionGroupId !== groupId) return
+    if (meshStarting || sessionGroupId !== groupId) return
+    if (meshActive && await isTincRunning()) return
     if (!window.electron?.tinc) return
     if (!(await shouldUseTincMesh(groupId))) return
 
@@ -317,6 +319,8 @@ async function connectHub(groupId, token, userId, { force = false } = {}) {
         useVoiceStore.getState().applyChannelsUpdate(channelState, userId?.toString())
     })
 
+    hub.on('ForceLogout', (data) => handleForceLogout(data))
+
     // A peer joined/left the mesh. We update host files LIVE (refreshMesh now
     // overwrites them in place without restarting tincd or bouncing the TAP
     // adapter), so existing connections never drop — this is what made tinc
@@ -369,6 +373,16 @@ async function connectHub(groupId, token, userId, { force = false } = {}) {
     }
 }
 
+async function rejoinNetbirdGroup(groupId) {
+    try {
+        await netbirdAPI.joinGroup(groupId)
+        return true
+    } catch (e) {
+        console.error('[lobby] netbird rejoin failed', e)
+        return false
+    }
+}
+
 export async function reconnectLobby() {
     const groupId = sessionGroupId
     if (!groupId) return false
@@ -376,9 +390,32 @@ export async function reconnectLobby() {
     const { token, user } = useAuthStore.getState()
     if (!token) return false
 
+    // اگه تونل محلی نت‌برد (VPN) قطعه — مثلاً بعد از قطع/عوض شدن اینترنت و گرفتن
+    // IP جدید — باید قبل از هر چیز خودِ اتصال نت‌برد رو دوباره بالا بیاریم؛ وگرنه
+    // چت درست می‌شه ولی مش/صدا و بقیه‌ی peer ها همچنان از طریق نت‌برد قابل دسترس
+    // نیستن. اتصال با همون peerId/identity قبلی انجام می‌شه (بدون setup-key جدید).
+    try {
+        const nbStatus = await window.electron?.netbird?.status?.()
+        if (nbStatus && !nbStatus.connected) {
+            await window.electron?.netbird?.reconnect?.()
+        }
+    } catch (e) {
+        console.error('[lobby] netbird reconnect failed', e)
+    }
+
+    // SignalR disconnect removes the peer from the NetBird group server-side.
+    await rejoinNetbirdGroup(groupId)
+
     const ok = await connectHub(groupId, token, user?.id, { force: true })
     if (ok && !meshActive && !meshStarting) scheduleLobbyMesh(groupId)
     return ok
+}
+
+/** Re-join NetBird when VPN recovers while still in a lobby session. */
+export async function recoverLobbyNetbird() {
+    const groupId = sessionGroupId
+    if (!groupId) return false
+    return rejoinNetbirdGroup(groupId)
 }
 
 export async function leaveLobby({ skipHubLeave = false } = {}) {

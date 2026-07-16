@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import {
     User,
@@ -9,6 +10,14 @@ import {
     Settings,
     Keyboard,
     Languages,
+    Wallet,
+    ShoppingCart,
+    ArrowDownToLine,
+    ArrowUpRight,
+    ArrowDownLeft,
+    History,
+    X,
+    ExternalLink,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useNetbirdStore } from '../store/netbirdStore'
@@ -26,9 +35,11 @@ export default function ProfilePage() {
     const { connected, ip, reconnecting } = useNetbirdStore()
     const { toast } = useNotificationStore()
     const { settings, update: updateSetting } = useSettingStore()
+    const isAdmin = !!user?.roles?.includes('Admin')
 
     const TABS = [
         { id: 'profile',  icon: User,     label: t('profile.tabProfile') },
+        ...(isAdmin ? [{ id: 'wallet', icon: Wallet, label: t('profile.tabWallet') }] : []),
         { id: 'settings', icon: Settings, label: t('profile.tabSettings') },
         { id: 'assets',   icon: Package,  label: t('profile.tabAssets'), soon: true },
         { id: 'ranking',  icon: Trophy,   label: t('profile.tabRanking'),   soon: true },
@@ -156,6 +167,10 @@ export default function ProfilePage() {
                         </>
                     )}
 
+                    {tab === 'wallet' && (
+                        <WalletPanel toast={toast} />
+                    )}
+
                     {tab === 'profile' && (
                         <>
                             <ProfileHero
@@ -243,7 +258,7 @@ export default function ProfilePage() {
                         </>
                     )}
 
-                    {tab !== 'profile' && tab !== 'settings' && (
+                    {tab !== 'profile' && tab !== 'settings' && tab !== 'wallet' && (
                         <ComingSoonPanel tab={TABS.find(t => t.id === tab)} />
                     )}
                 </div>
@@ -396,6 +411,351 @@ function HotkeySettings({ settings, onUpdate, toast }) {
                 ))}
             </div>
         </section>
+    )
+}
+
+const STATIC_TAR_BALANCE = 12450
+const TAR_COIN_TOMAN_RATE = 1000
+const BUY_QUICK_AMOUNTS = [200, 500, 1000]
+
+function formatGroupedNumber(value) {
+    if (value === '' || value == null) return ''
+    const n = Number(value)
+    if (!Number.isFinite(n)) return ''
+    return n.toLocaleString('en-US')
+}
+
+const STATIC_TOMAN_TX = [
+    { id: 't1', descKey: 'profile.walletTxBuy500', amount: 150000, coins: 500, dateKey: 'profile.walletTxDate1', status: 'success' },
+    { id: 't2', descKey: 'profile.walletTxBuy1000', amount: 280000, coins: 1000, dateKey: 'profile.walletTxDate2', status: 'success' },
+    { id: 't3', descKey: 'profile.walletTxBuy200', amount: 62000, coins: 200, dateKey: 'profile.walletTxDate3', status: 'pending' },
+]
+
+const STATIC_TAR_TX = [
+    { id: 'c1', descKey: 'profile.walletTxLobbyReward', amount: 150, dateKey: 'profile.walletTxDate4', type: 'credit' },
+    { id: 'c2', descKey: 'profile.walletTxItemPurchase', amount: 50, dateKey: 'profile.walletTxDate5', type: 'debit' },
+    { id: 'c3', descKey: 'profile.walletTxDailyBonus', amount: 25, dateKey: 'profile.walletTxDate6', type: 'credit' },
+    { id: 'c4', descKey: 'profile.walletTxReferral', amount: 100, dateKey: 'profile.walletTxDate7', type: 'credit' },
+]
+
+function WalletPanel({ toast }) {
+    const { t } = useTranslation()
+    const [historyTab, setHistoryTab] = useState('toman')
+    const [buyModalOpen, setBuyModalOpen] = useState(false)
+
+    return (
+        <>
+            <section className="relative overflow-hidden og-card rounded-xl p-6">
+                <div
+                    className="absolute inset-0 pointer-events-none opacity-40"
+                    style={{
+                        background: 'radial-gradient(ellipse 80% 60% at 20% 50%, rgba(0,218,243,0.18) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 85% 30%, rgba(255,75,137,0.12) 0%, transparent 55%)',
+                    }}
+                />
+                <div className="relative flex flex-col sm:flex-row items-center gap-6">
+                    <div className="relative shrink-0">
+                        <div
+                            className="absolute inset-0 rounded-full blur-xl opacity-60"
+                            style={{ background: 'radial-gradient(circle, rgba(0,218,243,0.5) 0%, transparent 70%)' }}
+                        />
+                        <img
+                            src="/tar-coin.png"
+                            alt="Tar Coin"
+                            className="relative w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-[0_0_24px_rgba(0,218,243,0.45)]"
+                        />
+                    </div>
+
+                    <div className="flex-1 min-w-0 text-center sm:text-start space-y-1">
+                        <p className="og-label text-og-muted text-[11px] uppercase tracking-wider">
+                            {t('profile.walletBalanceLabel')}
+                        </p>
+                        <div className="flex items-baseline justify-center sm:justify-start gap-2 flex-wrap">
+                            <span className="og-title text-4xl sm:text-5xl text-og-accent font-bold ltr">
+                                {STATIC_TAR_BALANCE.toLocaleString()}
+                            </span>
+                            <span className="text-og-muted text-sm font-semibold">{t('profile.walletTarCoin')}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setBuyModalOpen(true)}
+                            className="og-btn-primary flex items-center justify-center gap-2 px-5 py-2.5 text-sm">
+                            <Icon icon={ShoppingCart} size="sm" />
+                            {t('profile.walletBuyTarCoin')}
+                        </button>
+                        <button
+                            type="button"
+                            disabled
+                            title={t('profile.walletSellDisabledHint')}
+                            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-og text-sm font-semibold text-og-muted opacity-40 cursor-not-allowed bg-og-panel">
+                            <Icon icon={ArrowDownToLine} size="sm" />
+                            {t('profile.walletSellTarCoin')}
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section className="og-card rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                        <Icon icon={History} size="md" className="text-og-accent" />
+                        <h2 className="og-title text-base text-og-body">{t('profile.walletHistoryTitle')}</h2>
+                    </div>
+                    <div className="flex gap-1 p-1 rounded-lg bg-og-tab">
+                        <button
+                            type="button"
+                            onClick={() => setHistoryTab('toman')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                                historyTab === 'toman' ? 'og-tab-active' : 'og-tab-inactive hover:text-og-body'
+                            }`}>
+                            {t('profile.walletHistoryToman')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setHistoryTab('tarcoin')}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                                historyTab === 'tarcoin' ? 'og-tab-active' : 'og-tab-inactive hover:text-og-body'
+                            }`}>
+                            {t('profile.walletHistoryTarCoin')}
+                        </button>
+                    </div>
+                </div>
+
+                {historyTab === 'toman' ? (
+                    <div className="space-y-2">
+                        {STATIC_TOMAN_TX.map(tx => (
+                            <div
+                                key={tx.id}
+                                className="flex items-center gap-3 p-3 rounded-lg border border-og bg-og-panel hover:bg-og-card-hover transition-colors">
+                                <div className="shrink-0 w-9 h-9 rounded-lg bg-og-primary-dim border border-og-primary/30 flex items-center justify-center">
+                                    <Icon icon={ArrowUpRight} size="sm" className="text-og-accent" />
+                                </div>
+                                <div className="flex-1 min-w-0 text-start">
+                                    <div className="text-sm text-og-body truncate">{t(tx.descKey)}</div>
+                                    <div className="text-[11px] text-og-muted mt-0.5">{t(tx.dateKey)}</div>
+                                </div>
+                                <div className="text-start shrink-0 space-y-0.5">
+                                    <div className="text-sm font-mono ltr text-og-body">
+                                        {tx.amount.toLocaleString()} {t('profile.walletTomanUnit')}
+                                    </div>
+                                    <div className="text-[11px] font-mono ltr text-og-accent">
+                                        +{tx.coins.toLocaleString()} TC
+                                    </div>
+                                    <TxStatusBadge status={tx.status} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {STATIC_TAR_TX.map(tx => (
+                            <div
+                                key={tx.id}
+                                className="flex items-center gap-3 p-3 rounded-lg border border-og bg-og-panel hover:bg-og-card-hover transition-colors">
+                                <div className={`shrink-0 w-9 h-9 rounded-lg border flex items-center justify-center ${
+                                    tx.type === 'credit'
+                                        ? 'bg-og-primary-dim border-og-primary/30'
+                                        : 'bg-og-danger-bg border-og-danger-border'
+                                }`}>
+                                    <Icon
+                                        icon={tx.type === 'credit' ? ArrowDownLeft : ArrowUpRight}
+                                        size="sm"
+                                        className={tx.type === 'credit' ? 'text-og-accent' : 'text-og-secondary'}
+                                    />
+                                </div>
+                                <div className="flex-1 min-w-0 text-start">
+                                    <div className="text-sm text-og-body truncate">{t(tx.descKey)}</div>
+                                    <div className="text-[11px] text-og-muted mt-0.5">{t(tx.dateKey)}</div>
+                                </div>
+                                <div className={`text-sm font-mono ltr font-semibold shrink-0 ${
+                                    tx.type === 'credit' ? 'text-og-success' : 'text-og-secondary'
+                                }`}>
+                                    {tx.type === 'credit' ? '+' : '−'}{tx.amount.toLocaleString()} TC
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            {buyModalOpen && (
+                <BuyTarCoinModal
+                    onClose={() => setBuyModalOpen(false)}
+                    onGateway={amount => {
+                        toast(t('profile.walletBuySoon', { amount: amount.toLocaleString() }), 'info', 3000)
+                        setBuyModalOpen(false)
+                    }}
+                />
+            )}
+        </>
+    )
+}
+
+function BuyTarCoinModal({ onClose, onGateway }) {
+    const { t } = useTranslation()
+    const [amount, setAmount] = useState('')
+    const [error, setError] = useState('')
+    const inputRef = useRef(null)
+
+    const parsedAmount = parseInt(amount, 10)
+    const isValid = Number.isFinite(parsedAmount) && parsedAmount >= 1
+    const estimatedToman = isValid ? parsedAmount * TAR_COIN_TOMAN_RATE : 0
+
+    useEffect(() => { inputRef.current?.focus() }, [])
+
+    useEffect(() => {
+        function onKeyDown(e) {
+            if (e.key === 'Escape') onClose()
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [onClose])
+
+    function handleAmountChange(value) {
+        const digits = value.replace(/\D/g, '')
+        setAmount(digits)
+        setError('')
+    }
+
+    function selectQuick(value) {
+        setAmount(String(value))
+        setError('')
+    }
+
+    function handleGateway() {
+        if (!isValid) {
+            setError(t('profile.walletBuyAmountInvalid'))
+            return
+        }
+        onGateway(parsedAmount)
+    }
+
+    return createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 no-drag">
+            <div
+                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                onClick={onClose}
+                aria-hidden
+            />
+
+            <div
+                className="relative w-full max-w-sm og-panel p-6 shadow-2xl no-drag animate-slide-up"
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="buy-tarcoin-title">
+                <div className="flex items-start justify-between gap-3 mb-6">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-11 h-11 rounded-xl bg-og-primary-dim border border-og-primary/30 flex items-center justify-center shrink-0">
+                            <img src="/tar-coin.png" alt="" className="w-7 h-7 object-contain" />
+                        </div>
+                        <div className="min-w-0 text-start">
+                            <h3 id="buy-tarcoin-title" className="og-title text-lg text-og-accent">
+                                {t('profile.walletBuyModalTitle')}
+                            </h3>
+                            <p className="text-og-muted text-xs mt-0.5">{t('profile.walletBuyModalSubtitle')}</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-og-hover text-og-muted hover:text-og-body transition-colors shrink-0">
+                        <Icon icon={X} size="sm" />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    <div>
+                        <label htmlFor="buy-tarcoin-amount" className="og-label text-og-muted block mb-2">
+                            {t('profile.walletBuyAmountLabel')}
+                        </label>
+                        <div className="relative">
+                            <input
+                                id="buy-tarcoin-amount"
+                                ref={inputRef}
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                dir="ltr"
+                                className="og-input no-drag w-full pe-14 text-start tabular-nums text-base font-semibold tracking-wide"
+                                value={formatGroupedNumber(amount)}
+                                onChange={e => handleAmountChange(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleGateway()}
+                                autoComplete="off"
+                            />
+                            <span className="absolute end-3 top-1/2 -translate-y-1/2 text-og-muted text-xs font-semibold">
+                                TC
+                            </span>
+                        </div>
+                        {error && (
+                            <p className="text-og-danger text-xs mt-2">{error}</p>
+                        )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        {BUY_QUICK_AMOUNTS.map(value => (
+                            <button
+                                key={value}
+                                type="button"
+                                onClick={() => selectQuick(value)}
+                                className={`px-3 py-1.5 rounded-lg border text-sm font-semibold tabular-nums transition-colors ${
+                                    parsedAmount === value
+                                        ? 'border-og-primary bg-og-primary-dim text-og-accent'
+                                        : 'border-og text-og-muted hover:text-og-body hover:border-og-primary/50'
+                                }`}>
+                                {value.toLocaleString()}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="rounded-xl border border-og bg-og-subtle px-4 py-3 text-start">
+                        <div className="og-label text-og-muted text-[10px] mb-1">{t('profile.walletBuyEstimatedLabel')}</div>
+                        <div className="text-og-body text-base font-semibold tabular-nums tracking-wide" dir="ltr">
+                            {isValid
+                                ? t('profile.walletBuyEstimatedPrice', { amount: estimatedToman.toLocaleString() })
+                                : '—'}
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleGateway}
+                        disabled={!isValid}
+                        className="og-btn-primary w-full py-2.5 text-sm flex items-center justify-center gap-2">
+                        <Icon icon={ExternalLink} size="sm" />
+                        {t('profile.walletBuyGoGateway')}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="w-full py-2.5 rounded-lg text-og-muted hover:text-og-body transition-colors text-sm">
+                        {t('common.cancel')}
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body,
+    )
+}
+
+function TxStatusBadge({ status }) {
+    const { t } = useTranslation()
+    const styles = {
+        success: 'text-og-success bg-og-primary-dim border-og-primary/25',
+        pending: 'text-og-muted bg-og-subtle border-og',
+    }
+    const labels = {
+        success: t('profile.walletTxStatusSuccess'),
+        pending: t('profile.walletTxStatusPending'),
+    }
+    return (
+        <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded border font-medium ${styles[status] ?? styles.pending}`}>
+            {labels[status] ?? status}
+        </span>
     )
 }
 
